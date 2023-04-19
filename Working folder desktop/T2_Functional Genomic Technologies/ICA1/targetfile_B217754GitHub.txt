@@ -1,0 +1,7 @@
+Name	Filename	Sample	Group	Colour	Description
+HCa.1	GSM213045.CEL	GSM213045	High_calcium	blue	"SI1_wk2_HF (high fat diet, high calcium)"
+HCa.2	GSM213051.CEL	GSM213051	High_calcium	blue	"SI2_wk2_HF (high fat diet, high calcium)"
+HCa.3	GSM213057.CEL	GSM213057	High_calcium	blue	"SI3_wk2_HF (high fat diet, high calcium)"
+LCa.1	GSM462207.CEL	GSM462207	Low_calcium	red	"SI1_wk2_HF (high fat diet, low calcium)"
+LCa.2	GSM462208.CEL	GSM462208	Low_calcium	red	"SI2_wk2_HF (high fat diet, low calcium)"
+LCa.3	GSM462209.CEL	GSM462209	Low_calcium	red	"SI3_wk2_HF (high fat diet, low calcium)"
