@@ -1,0 +1,78 @@
+---
+title: "Research Proposal first day"
+author: "Fraser Singh"
+date: "2023-05-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# List of packages to check and install
+packages <- c("DoubletFinder", "Seurat", "DESeq2")
+
+# Function to check if a package is installed
+is_package_installed <- function(package) {
+  return(package %in% installed.packages())
+}
+
+# Install packages if they are not already installed
+for (package in packages) {
+  if (!is_package_installed(package)) {
+    install.packages(package, repos = "https://cloud.r-project.org")
+  }
+}
+```
+
+```{r}
+# List of packages to check and install
+packages <- c("Seurat", "DESeq2")
+
+# Function to check if a package is installed
+is_package_installed <- function(package) {
+  return(package %in% installed.packages())
+}
+
+# Check and install packages
+for (package in packages) {
+  if (!is_package_installed(package)) {
+    # Check required R version for the package
+    required_version <- packageVersion(package)[["R_Version"]]
+
+    # Check if current R version is compatible
+    if (as.character(getRversion()) >= required_version) {
+      install.packages(package, repos = "https://cloud.r-project.org")
+    } else {
+      cat(paste0("R version ", required_version, " or higher is required for package '", package, "'.\n"))
+      cat("Please update your R version.\n")
+    }
+  }
+}
+
+```
+
+```{r}
+#Install Doublet Finder
+remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
+
+#Install DESeq2
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("DESeq2")
+```
+Turns out that the DESeq2 Github page is not accurate for running the pipeline. Watch out for sct=FLASE parameter as it will fail run if used when not needed.
+
+
+```{r}
+#Download and install picard
+system(
+  "curl -L -o https://github.com/broadinstitute/picard/releases/download/3.0.0/picard.jar picard.jar;
+  #locate picard.jar
+  java -version;
+  #java -jar /path/to/picard.jar -h"
+)
+```
+

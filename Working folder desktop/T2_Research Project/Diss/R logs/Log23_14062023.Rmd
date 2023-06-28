@@ -1,0 +1,109 @@
+# 14/06/2023
+
+## Plan today
+
+Run Ximerakis Qc and save object
+
+Run Sltoa QC and save objects
+
+Fidgure out Verity data QC, contamination is broad.
+
+SoupX
+
+duplicate gene names!
+
+------------------------------------------------------------------------
+
+Had to move to msc6 whilst i ask for help with msc8
+
+### SoupX
+
+Load raw Xiemrakis filtered and unfiltered, naming each object accordingly in R, No merging... this could be a new script which then saves the filtered matrices out
+
+Run the following process to obtain cluster information
+
+```{r}
+pbmc.counts <- Read10X(data.dir = "~/Downloads/pbmc3k/filtered_gene_bc_matrices/hg19/")
+pbmc <- CreateSeuratObject(counts = pbmc.counts)
+pbmc <- NormalizeData(object = pbmc)
+pbmc <- FindVariableFeatures(object = pbmc)
+pbmc <- ScaleData(object = pbmc)
+pbmc <- RunPCA(object = pbmc)
+pbmc <- FindNeighbors(object = pbmc)
+pbmc <- FindClusters(object = pbmc)
+pbmc <- RunTSNE(object = pbmc)
+DimPlot(object = pbmc, reduction = "tsne")
+```
+
+Soupx attempt script in uni onedrive folder, up to date version on msc6, saving image as SoupXattempt.Rdata.
+
+Load raw and filtered Xiemrakis matrices using Read10X,
+
+make merged seurat to run clustering and get those ids
+
+send cluster info to the original objects
+
+convert filtered matrices to Soupx objects
+
+add clustering info to the Soupx objects
+
+Removal of ambient RNA using SoupX: <https://cellgeni.github.io/notebooks/html/new-10kPBMC-SoupX.html>
+
+constantAmateur/SoupX: R package to quantify and remove cell free mRNAs from droplet based scRNA-seq data: <https://github.com/constantAmateur/SoupX>
+
+SoupX PBMC Demonstration: <https://cran.r-project.org/web/packages/SoupX/vignettes/pbmcTutorial.html>
+
+SoupX removes ambient RNA contamination from droplet based single cell RNA sequencing data \| bioRxiv: <https://www.biorxiv.org/content/10.1101/303727v1>
+
+------------------------------------------------------------------------
+
+## Nick's advice
+
+If doing UMAPs, use singleR to annotate, but beware that it might be out of date, skewed and not great for neural cells.
+
+SingleR Cluster-wise annotation: <https://www.biostars.org/p/9462367/>
+
+Chapter 9 Cross-annotating mouse brains \| Assigning cell types with SingleR: <http://bioconductor.org/books/release/SingleRBook/cross-annotating-mouse-brains.html>
+
+## SUMMARY
+
+change soupx[script to use load10](https://cran.r-project.org/web/packages/SoupX/vignettes/pbmcTutorial.html)x as this should load some clustering! if this doesn't work I need to add clustering info to the correct soupx objects but the error currently arising is
+
+```{r}
+#Error in sc$toc : $ operator is invalid for atomic vectors
+```
+
+So need to find out what is going on!
+
+This is usually not needed when using the `load10X` function as the cellranger produced values are automatically loaded. This was then done for one sample:
+
+```{r}
+if (!require("SoupX", quietly = TRUE))
+    install.packages("SoupX")
+
+library(Seurat)
+library(tidyverse)
+library(SoupX)
+library(DropletUtils)
+library(ggplot2)
+remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')
+
+library(DoubletFinder)
+library(knitr)
+
+sample_test<-load10X("./Ximerakis/crOX1X/outs/")
+par(mar = c(1, 1, 1, 1))
+sample_test <- autoEstCont(sample_test)
+souped_matrix <-adjustCounts(sample_test)
+#or
+adj.matrix  <- adjustCounts(soup.channel, roundToInt = T)
+DropletUtils:::write10xCounts("soupX_pbmc10k_filt", adj.matrix)
+```
+
+Now need to add a loop to do this for each sample, then load the new matrix into the script with Qc in it and process from there with new plots.
+
+open SoupxMSC6attempt.Rmd and SoupXattempt.Rdata for code to use
+
+Use <https://rstudio-msc8.bio.ed.ac.uk/> for future R work?
+
+[This video](https://www.youtube.com/watch?v=huxkc2GH4lk&ab_channel=FlorianWagner) explains why SCTransform (Pearson residuals) is good

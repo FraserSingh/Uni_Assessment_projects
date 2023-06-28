@@ -1,0 +1,134 @@
+# 24/06/2023
+
+## Plan today
+
+Integrate SoupX code into the workflow, could keep as separate script but might make more sense to use in main script since the variable names are used.
+
+Cluster and UMAP on filtered data
+
+------------------------------------------------------------------------
+
+## Soupx integration
+
+```{r}
+#Soupx code, add this to loop for loading data?
+
+#load data from one sample
+folder_path=paste0("/home/s2268606/University_Directories/Project_23/External_datasets/Ximerakis/",folder_name, "/outs/")
+
+current_data<-load10X(folder_path)
+par(mar = c(1, 1, 1, 1))
+#get soup ratio
+current_data <- autoEstCont(current_data)
+
+#save soup-less matrix
+souped_matrix <-adjustCounts(current_data, roundToInt = T)
+#or
+souped_matrix  <- adjustCounts(soup.channel)
+
+# #write object to directory?
+# DropletUtils:::write10xCounts("soupX_pbmc10k_filt", adj.matrix)
+# 
+# #load the adjusted matrix
+# adj.matrix <- Read10X("data/update/soupX_pbmc10k_filt")
+
+#convert to Seurat object
+srat <- CreateSeuratObject(souped_matrix,project = "Ximerakis") 
+```
+
+Resume my pipeline? Need to add metadata... What if i used Read10X but specified counts as the output from soupX....
+
+The rest of the pipeline can pick up where i left off, but need to find multiplex information and see if the parameters need to be changed for that.
+
+## Slota QC
+
+Run QC with old version of data loading to inspect the data overall, then return with soupx and perform as normal.
+
+Had to split the raw and filtered data into subdirectories to mirror 10X data to be able to use the following code, also had to gzip everything, resulting in the follwing structure:
+
+```{r}
+# Slota_paper
+# ├── cfg.txt
+# ├── cluster_file.csv
+# ├── filtered_feature_bc_matrix
+# │   ├── barcodes.tsv.gz #was previously norm_barcodes.tsv
+# │   ├── features.tsv.gz #was previously genes.tsv
+# │   └── matrix.mtx.gz
+# ├── genes.tsv
+# ├── metadata.csv
+# ├── raw_feature_bc_matrix
+# │   ├── barcodes.tsv.gz
+# │   ├── features.tsv.gz
+# │   └── matrix.mtx.gz
+# └── urlsSlota.txt
+```
+
+```{r}
+
+#try using this next! as the counts, then add metadata.
+Slota_counts<-read10xCounts("/localdisk/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper_original_format/", col.names=TRUE)
+
+raw_objects_metadata<- read.csv("/localdisk/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/metadata.csv")
+
+rawtable<-Read10X("/localdisk/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/raw_feature_bc_matrix")
+
+filteredtable<-Read10X("/localdisk/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/filtered_feature_bc_matrix/")
+
+
+filteredObject<-CreateSeuratObject(counts=filteredtable, meta.data = raw_objects_metadata)
+
+rawObject<-CreateSeuratObject(counts=rawtable, meta.data = raw_objects_metadata )
+
+#Check what this should look like
+sc = SoupChannel(rawtable, filteredtable)
+
+
+#This doesn't work yet, dimensions are wrong
+ sc=setClusters(sc, cluster_file)
+#Error in setClusters(sc, cluster_file) : 
+#Invalid cluster specification.  See help.
+
+sc<- autoEstCont(Slota_counts)
+
+
+```
+
+## Looking into UMAPs
+
+Might want to adjust the end of the doublet finder loop, adding singlet annotation to the original Ximarkis fitlered object which has not been normalised etc. so that this can be [done manually after the fact.](https://www.singlecellcourse.org/single-cell-rna-seq-analysis-using-seurat.html#normalization-and-dimensionality-reduction:~:text=size%3D10))-,8.3,-SCTransform%20normalization%20and)
+
+## Gene markers
+
+Abcam suggests [these](https://www.abcam.com/neuroscience/astrocyte-markers-and-functions) in an article, but also a [rough guide](https://www.abcam.com/neuroscience/neural-markers-guide) for glial cells. [This practical protocol](https://www.abcam.com/protocols/acute-isolation-of-hippocampal-astrocytes-protocol) mentions the staining of astrocytes with SR101.
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+With SoupX working, the Ximerakis filters can be dropped down to a minimum gene count of 150 to remove residual noise.
+
+Get Slota going again, see above code for instruction, but also look up easier way to load it (maybe SCE?)
+
+Soupx didn't work for Slota, so loading it in as standard workflow entails
+
+Ximerakis merge the list of filtered samples back into a single one to carry on.
+
+Check that video of the asia guy who merged stuff back together
+
+UMAPS by Tuesday, label clusters
+
+## Notes
+
+Could use [Read10X_Multi_Directory](https://samuel-marsh.github.io/scCustomize/reference/Read10X_Multi_Directory.html) to read the data in if i wasn't using soupx.
+
+Slota_paper on msc7 is perishable
+
+See this [github from Slota](https://github.com/jslota/scRNAseq-prion-infection/blob/main/script_1_qc.R)for script ideas
+
+##### Work ideas
+
+qc, cluster, singler, astrocytes, 4-5 targets per borad cluster (literature, ABCAM-\> convert to , get refined options for sub-clustering.
+
+I want to use [parrallelisation](https://www.blasbenito.com/post/02_parallelizing_loops_with_r/) on my R loop for Doublet finder, which is now taking far longer than it used to. Need to chat with Al or john about it.
+
+[How to use Harmony](https://portals.broadinstitute.org/harmony/SeuratV3.html)

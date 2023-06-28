@@ -1,0 +1,256 @@
+# 17/05/2023
+
+## Plan today
+
+Copy data to the shared drive ✅
+
+-   staged in everything again, run stageout at the end of each day
+
+Fastqc and multiQC of Ximerakis
+
+-   Test on msc8✅
+
+    Queued on Eddie now with job ID 30432673
+
+Get cellranger script up and running for Ximerakis fastq
+
+-   Making reference genome from cellranger ⌛
+
+    -   Begin aligning our data to cellranger genome too?
+
+-   Then cellranger count [Running cellranger count -Software -Single Cell Gene Expression -Official 10x Genomics Support](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/tutorial_ct) ; [Analyze scRNA-Seq Data From a Publication Using 10x Software -Software -Single Cell Gene Expression -Official 10x Genomics Support](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/tutorials/gex-analysis-nature-publication)
+
+Set up Parse pipeline environment
+
+Get relevant samples from our data and unblind by looking at sample annotation in shared drive, start to filter data?
+
+Look at matrix file from terminal Slota paper
+
+------------------------------------------------------------------------
+
+## Moving data to datastore
+
+Used a staging interactive node on eddie to move everything from scratch space to group datastore. Now going to get scripts ready for staging data in and out, keeping them in.
+
+```{bash}
+#new parameter for eddie analysis and stageout scripts, makes sure analysis scripts wait for staging-in or analysis to be completed before the next step.
+
+#$ -hold_jid <specified job name of the proceeding script>
+
+#Meaning the new format is:
+
+#!/usr/bin/sh
+#$ -cwd             #run in current working dir
+#$ -N <job name>    #name of job
+#$ -l h_rt=04:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=8G     #How much RAM is required
+#$ -pe sharedmem 6  #added from previous version
+#$ -e <jobname>.e     #where errors go
+#$ -hold_jid <specified job name of the proceeding script>
+```
+
+Synced with git to move scripts, should add repo for datastore as backup.
+
+"We recommend the `rsync` and `cp` commands. The advantage of `rsync` is that it can be used to synchronise directories between DataStore and the Eddie filesystem and only copies files that have changed, thus reducing the transfer time."
+
+```{bash}
+qlogin -q staging
+#moved scripts for variable setup and staging to datastore as backup
+```
+
+Adding multi-QC and FASTQC to conda env, created backup of project env because downgrades were required.
+
+```{bash}
+conda env export --name project_test --file project_test_pre_QC.yml
+```
+
+## Quality checks
+
+```{bash}
+#logged into eddie 
+qlogin -l h_vmem=6G
+```
+
+Staged Ximerakis data in and ran Fastqc and multiQC
+
+```{bash}
+#!/bin/bash
+#
+# Example data staging job script that copies a directory from DataStore to Eddie with rsync
+#
+# Job will restart from where it left off if it runs out of time
+# (so setting an accurate hard runtime limit is less important)
+
+# Grid Engine options start with a #$
+# Name job and set to use current working directory
+#$ -N stageinFRS_QC
+#$ -cwd
+# Choose the staging environment
+#$ -q staging
+
+# Hard runtime limit
+#$ -l h_rt=12:00:00
+
+# Make the job resubmit itself if it runs out of time: rsync will start where it left off
+#$ -r yes
+#$ -notify
+trap 'exit 99' sigusr1 sigusr2 sigterm
+
+# Source and destination directories
+#
+# Source path on DataStore in the staging environment
+# Note: these paths are only available on the staging nodes
+# It should start with one of /exports/csce/datastore, /exports/chss/datastore, /exports/cmvm/datastore or /exports/igmm/datastore
+#
+SOURCE=/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/External_datasets #or Ensembl_refs
+
+#
+# Destination path on Eddie. It should be on the fast Eddie HPC filesystem, starting with one of:
+# /exports/csce/eddie, /exports/chss/eddie, /exports/cmvm/eddie, /exports/igmm/eddie or /exports/eddie/scratch,
+#
+DESTINATION=/exports/eddie/scratch/s2268606/Project_space
+
+# Perform copy with rsync
+# Note: do not use -p or -a (implies -p) as this can break file ACLs at the destination
+rsync -rl ${SOURCE} ${DESTINATION}
+
+```
+
+```{bash}
+#!/usr/bin/sh
+#$ -cwd             #run in current working dir
+#$ -N FastQC_Ximerakis
+#$ -l h_rt=12:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=8G     #How much RAM is required
+#$ -pe sharedmem 6  #added from previous version
+#$ -e FastQC_Ximerakis_1.e     #where errors go
+#$ -hold_jid stageinFRS_QC
+
+#analysis script, takes .fastq.gz and creates report, then uses multiqc to create overall report too
+
+
+#activate conda env
+source /etc/profile.d/modules.sh
+module load anaconda/5.3.1
+source activate project_test
+
+#perform in Ximerakis
+cd /exports/eddie/scratch/s2268606/External_datasets/Ximerakis
+mkdir fastqc_merged
+
+find ./Dumped -maxdepth 1 -name "*.fastq.gz"  -print|sort|uniq >filelist.txt
+
+for F in $(cat filelist.txt) ; do
+
+        FULLSTRING=$F
+        fastqc  ${FULLSTRING} -t 20  -o ./fastqc_merged
+done
+
+#run multiqc
+multiqc ./fastqc_merged -o .
+
+```
+
+```{bash}
+#!/bin/bash
+#
+# Example data staging job script that copies a directory from Eddie to DataStore with rsync
+#
+# Job will restart from where it left off if it runs out of time
+# (so setting an accurate hard runtime limit is less important)
+
+# Grid Engine options start with a #$
+#$ -N stageoutFRS
+#$ -cwd
+# Choose the staging environment
+#$ -q staging
+#$ -hold_jid FastQC_Ximerakis
+
+
+# Hard runtime limit
+#$ -l h_rt=12:00:00
+
+# Make the job resubmit itself if it runs out of time: rsync will start where it left off
+#$ -r yes
+#$ -notify
+trap 'exit 99' sigusr1 sigusr2 sigterm
+
+# Source and destination directories
+#
+# Source path on Eddie. It should be on the fast Eddie HPC filesystem, starting with one of:
+# /exports/csce/eddie, /exports/chss/eddie, /exports/cmvm/eddie, /exports/igmm/eddie or /exports/eddie/scratch,
+#
+SOURCE=/exports/eddie/scratch/s2268606/External_datasets/Ximerakis
+#
+# Destination path on DataStore in the staging environment
+# Note: these paths are only available on the staging nodes
+# It should start with one of /exports/csce/datastore, /exports/chss/datastore, /exports/cmvm/datastore or /exports/igmm/datastore
+#
+DESTINATION=/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/External_datasets/
+
+# Perform copy with rsync
+# Note: do not use -p or -a (implies -p) as this can break file ACLs at the destination
+rsync -rl ${SOURCE} ${DESTINATION}
+```
+
+realised that I can just use staging for the whole directory of my project, not uniquie folders, using rsync will make sure differences are the only thing downloaded.
+
+## Cell ranger
+
+Installed cellranger by downloading then unpacking tar <https://anaconda.org/HCC/cellranger>
+
+```{bash}
+wget -O cellranger-7.1.0.tar.gz "https://cf.10xgenomics.com/releases/cell-exp/cellranger-7.1.0.tar.gz?Expires=1684357164&Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9jZi4xMHhnZW5vbWljcy5jb20vcmVsZWFzZXMvY2VsbC1leHAvY2VsbHJhbmdlci03LjEuMC50YXIuZ3oiLCJDb25kaXRpb24iOnsiRGF0ZUxlc3NUaGFuIjp7IkFXUzpFcG9jaFRpbWUiOjE2ODQzNTcxNjR9fX1dfQ__&Signature=byqC0N5LwAqelXEGGrKeETb~Mv0IIunFlMpluMCNEjK4feNGaXdEn-F3Hs5GagL8FQUpZ1ncTXP3Z62w-74KN8g98Eh-i8g6UXiU6Eg8lDKlBG~pQjewmUrveBTDS5UtCo2P76POjIrz327uA6I9pW3wqyXm-t6FwjrnOVTILksWWXoQ1XvPPmZQq0t82ST~rpmDU8YI13MaPBQT1qFOm5FM2c1JnOWyU1WJDFIWTAj1QN~GtbTIkuxJ8zKAqket5zp3XqzZpf6Z6GbPet1J5KrOG1ukQrN~PCxa~ZMRoBN1jB8J6TMCZLcySgg7y9I4NapAtSNKQO1tunwtIKp6lg__&Key-Pair-Id=APKAI7S6A5RYOXBWRPDA"
+
+#added to path
+
+ export PATH=/exports/eddie/scratch/s2268606/yard/cellranger-7.1.0:$PATH
+#ran sitecheck too  
+```
+
+Making custom cellranger reference genome <https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/tutorial_mr#mkrefsetup>, /exports/eddie/scratch/s2268606/Project_space/Ensembl_refs/cellranger_genome.sh . Waited until the staging in job is done before running cellranger genome assembly.
+
+```{bash}
+#!/usr/bin/sh
+
+#$ -cwd             #run in current working dir
+#$ -N Cellranger_genome
+#$ -l h_rt=12:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=8G     #How much RAM is required
+#$ -pe sharedmem 3  #added from previous version
+#$ -e Cellranger_genome.e     #where errors go
+
+
+cellranger mkref --genome Cellranger_Mouse_genome --fasta ./Mus_musculus.GRCm39.dna.primary_assembly.fa --genes Mus_musculus.GRCm39.109.gtf
+
+```
+
+## Notes from Nick
+
+Slota paper is also known as terminal paper
+
+matrix compare to DGEs whilst cellranger works
+
+filtering according to reads etc. mito., many instructions are for human, search for lowercase mito to avoid this.
+
+define filter according to % of mitoc. gene per cell too.
+
+Might need to filter with cutadapt
+
+## Summary
+
+Goals foe end of week:
+
+-   Have our data aligning to the reference (check parse pipeline)
+
+-   do qc on fastqs
+
+-   Have cell ranger running to make matrix file from fastqs
+
+-   general plots of read per cell
+
+-   look at /exports/eddie/scratch/s2268606/External_datasets/Ximerakis for fastq and multiq
+
+-   Make cellranger accessible to script
+
+-   merge Exnertal dataset with Project space, use stage in and out properly

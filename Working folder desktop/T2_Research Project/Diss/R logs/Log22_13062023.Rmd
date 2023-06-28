@@ -1,0 +1,167 @@
+# 13/06/2023
+
+## Plan today
+
+------------------------------------------------------------------------
+
+-   Update Slota script with changes from Ximerakis.
+
+    -   Set up and run slota QC as this is similar to Ximerakis.
+
+    -   Verity Qc will be different, but go off of Nick's guidelines.
+
+-   Re-run cellranger with different genome/annotations. Compare exon mapping % in second summary stats.
+
+    -   use cellranger's own and see what happens.
+    -   Then delete OX1X/sample folders?
+
+------------------------------------------------------------------------
+
+# Ximerakis QC running
+
+XimerakisUMIsGenesDetectedMin20Genes.png shows the UMI vs genes detected with a minimum gene count of 20 features. A significant portion of the cells in each sample are in the lower quadrants of the plots, indicating dying cells as [stated here](https://github.com/hbctraining/scRNA-seq/blob/master/lessons/04_SC_quality_control.md#:~:text=Two%20metrics%20that,red%20blood%20cells).). After filtering, I will re-assess the state of these and we should hopefully see far less down there. Although this bioligically might make sense if we saw more in the older samples on the whole compared to the younger samples, there is no discernable pattern on density of cells between age groups with regards to dying cells in this perspective.
+
+The complexity graph shows that most of the UMIs have over 0.8 log10Genes per UMI, which is good as the desired target is 0.8.
+
+-   reloading Ximerakis
+
+<!-- -->
+
+-   Need to add violin without sample split
+
+-   VlnPlot(Ximerakis_total, features=c("nFeature_RNA","nCount_RNA","percent.mt", "percent.rp"), ncol=4, pt.size = 0.05)
+
+-   repeat analysis on fitlered QC to check that it's gone right
+
+Deciding what gene filter to set as minimum, and literature talks about 500 genes minimum. [This paper](https://www.sciencedirect.com/science/article/pii/S0092867421009429?via%3Dihub#sec4) has some insightful info on their methods. I willl try and carry on with a filter of 300 instead (seems to trim most mito and dying cells in the UMI vs cells detected graphs) and see what the top results are from DGE, hopefully we can see cell death or mito indicators and the filter can then be increased until this is no longer observed.
+
+I alos filter genes so that only those present in more than 3 cells are present.
+
+TRUE NUMBERvvvvvv
+
+```         
+OX1X OX2X OX3X OX4X OX5X OX6X OX7X OX8X YX1L YX2L YX3R YX4R YX5R YX6L YX7R YX8L 
+2285 1889 5822 5321 2902 3110 3481 3950 1970 2475 2588 3141 2532 2603 3548 3734
+```
+
+### Post-filter check
+
+After (nUMI \> 0, nGene \>100, percent.mt \<20), we get:
+
+INCORRECT, SEE ABOVE
+
+```         
+OX1X OX2X OX3X OX4X OX5X OX6X OX7X OX8X YX1L YX2L YX3R YX4R YX5R YX6L YX7R YX8L 
+3811 3023 7930 7954 4007 4359 4734 5308 2801 5088 4830 5117 4485 4914 6633 7241 
+```
+
+This is not many but that's the data! Going to run doubletfinder, then eliminate doublets for a total of:
+
+## Ximerakis Quality to copy in from [here](https://github.com/hbctraining/scRNA-seq/blob/master/lessons/04_SC_quality_control.md)
+
+### Counts per sample
+
+```{r}
+# Visualize the number of cell counts per sample
+metadata_test_test %>% 
+  	ggplot(aes(x=sample, fill=sample)) + 
+  	geom_bar() +
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells")
+```
+
+### nUMI/ transcripts per cell
+
+With line at 500 for ideal minimum
+
+```{r}
+# Visualize the number UMIs/transcripts per cell
+metadata_test_test %>% 
+  	ggplot(aes(color=sample, x=nUMI, fill= sample)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	ylab("Cell density") +
+  	geom_vline(xintercept = 500)
+```
+
+### Genes per cell
+
+```{r}
+# Visualize the distribution of genes detected per cell via histogram
+metadata_test %>% 
+  	ggplot(aes(color=sample, x=nGene, fill= sample)) + 
+  	geom_density(alpha = 0.2) + 
+  	theme_classic() +
+  	scale_x_log10() + 
+  	geom_vline(xintercept = 300)
+
+# Visualize the distribution of genes detected per cell via boxplot
+metadata_test %>% 
+  	ggplot(aes(x=sample, y=log10(nGene), fill=sample)) + 
+  	geom_boxplot() + 
+  	theme_classic() +
+  	theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  	theme(plot.title = element_text(hjust=0.5, face="bold")) +
+  	ggtitle("NCells vs NGenes")
+```
+
+### UMI vs. genes detected
+
+We want cells in top right
+
+```{r}
+# Visualize the correlation between genes detected and number of UMIs and determine whether strong presence of cells with low numbers of genes/UMIs
+metadata_test %>% 
+  	ggplot(aes(x=nUMI, y=nGene, color=mitoRatio)) + 
+  	geom_point() + 
+	scale_colour_gradient(low = "gray90", high = "black") +
+  	stat_smooth(method=lm) +
+  	scale_x_log10() + 
+  	scale_y_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 500) +
+  	geom_hline(yintercept = 250) +
+  	facet_wrap(~sample)
+```
+
+### MitoRatio
+
+```{r}
+# Visualize the distribution of mitochondrial gene expression detected per cell
+metadata_test %>% 
+  	ggplot(aes(color=sample, x=mitoRatio, fill=sample)) + 
+  	geom_density(alpha = 0.2) + 
+  	scale_x_log10() + 
+  	theme_classic() +
+  	geom_vline(xintercept = 0.2)
+```
+
+### Complexity
+
+```{r}
+# Visualize the overall complexity of the gene expression by visualizing the genes detected per UMI
+metadata_test_test %>%
+  	ggplot(aes(x=log10GenesPerUMI, color = sample, fill=sample)) +
+  	geom_density(alpha = 0.2) +
+  	theme_classic() +
+  	geom_vline(xintercept = 0.8)
+```
+
+## Filtering
+
+```{r}
+subset
+```
+
+### Saving object
+
+```{r}
+# Create .RData object to load at any time
+save(metadata_test, file="Rdata/Ximerakis_filtered.RData")
+
+```
+
+## SUMMARY

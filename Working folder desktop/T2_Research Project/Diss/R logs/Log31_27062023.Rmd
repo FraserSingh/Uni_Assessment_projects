@@ -1,0 +1,116 @@
+# 27/06/2023
+
+## Plan today
+
+------------------------------------------------------------------------
+
+## OX6X outputs
+
+31177109 with some amendments, now 31180238 after deleting the Redux folder
+
+## Setting R up on Eddie
+
+As shown [here](https://www.wiki.ed.ac.uk/pages/viewpage.action?spaceKey=ResearchServices&title=R)
+
+```{bash}
+module load igmm/apps/R/4.2.2
+mkdir <path to location on group drive for R packages to be stored>
+```
+
+Open R in the working directory of choice (type: 'R'). Specify the path to the newly made directory to install to.
+
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager", lib="/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/Rpackages")
+
+BiocManager::install("DropletUtils", lib="/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/Rpackages")
+BiocManager::install("Seurat", lib="/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/Rpackages")
+
+remotes::install_github('chris-mcginnis-ucsf/DoubletFinder', lib="/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/Rpackages")
+
+if (!require("SoupX", quietly = TRUE))
+    install.packages("SoupX", lib="/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/Rpackages")
+
+if (!require("scCustomize", quietly = TRUE))
+    install.packages("scCustomize", lib="/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/Rpackages")
+
+BiocManager::install("glmGamPoi", lib="/exports/cmvm/eddie/eb/groups/mabbott_grp/Fraser/Project_23/Rpackages")
+```
+
+Then, any time you want to access these in the future, just open R as before and:
+
+```{r}
+library(DropletUtils)
+library(Seurat)
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(knitr)
+library(DoubletFinder)
+library(SoupX)
+library(scCustomize)
+```
+
+Submit this eddie job, after editting the R script to normalis and cluster the data nicely. Make sure to set memory saving params
+
+```{bash}
+#!/usr/bin/sh
+#$ -cwd             #run in current working dir
+#$ -N Verity_Normalisation    #name of job
+#$ -l h_rt=48:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=200G     #How much RAM is required
+#$ -pe sharedmem 4  #how many cores?
+#$ -e Verity_Normalisation #where errors go
+#$ -M S2268606@ed.ac.uk    #contact info
+#$ -m beas  #notify if job begins, ends, aborts or suspends
+
+
+# set up module environment
+. /etc/profile.d/modules.sh
+module load R/4.2.2
+
+Rscript <your_R_script.R>
+
+#alter the parameters
+```
+
+```{r}
+#add this after estimatesoup in Verity feature branch
+sc = setContaminationFraction(sc, 0.2)
+```
+
+## [Harmony](https://hbctraining.github.io/scRNA-seq_online/lessons/06a_integration_harmony.html)
+
+Decide which samples to integrate from each dataset
+
+merge the samples from each dataset individually
+
+## supervisor Meeting notes
+
+For Verity Soupx features, use more explciit normalisation methods instead of SCTransform, which assumes a linear relatioship between genes and umi.
+
+Check spelling in OX6X redux script
+
+Do Slota UMAP, label by sample identity and assess the weird samples. Ask if mito, rp are odd
+
+focus on clustering and subseqeuntly differential expression.
+
+Labellingt he astrocyte popultion in the cluster will be time consuming
+
+Filters to use on DE:
+
+-   Degree of change
+
+-   x% of cells in a cluster must express this geen to be included as a significant DEG. DESeq2 accoutns for low represetnation in clusters.
+
+Optimise the Log2FC param.
+
+Use the uni servers for DEs and clustering. Could do Eddie but will need to script.
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+new multiqc should be coming through as 31182990 with ReduxOX6X, can load all of the new data into R now to overwrite Ximerakis previous work? would need to do all the tidy up as previously mentioned, and use the scripts on msc8? "C:\\Users\\frase\\OneDrive - University of Edinburgh\\Working folder desktop\\T2_Research Project\\Diss\\Outputs\\cellrangerMultiQC_Redux_1.html" has output and looks encouraging, but gene counts are down a fair bit.
+
+Just pick up from one of [these lessons](https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/07_SC_clustering_cells_SCT.md) and decide what needs to be done, clustering before integration would be ideal, then integrate.

@@ -1,0 +1,68 @@
+# 23/05/23
+
+## Plan today
+
+Wait for crcounts to finish (possibly rerun) general plots of read per cell
+
+Run fastqc on the new fastqs
+
+start looking at Seurat object, plotting?
+
+------------------------------------------------------------------------
+
+## QC
+
+Fastqc re run, modified from Log 6. Submitted as new script job ID 30503610
+
+## Using Seurat
+
+Using Rstudio on msc6 seems to work! Here's how to use:
+
+-   Moba xterm tunnelling. select Rstudio tunnel msc8
+
+-   Go to <http://127.0.0.1:9997/> online and login with uni details
+
+## Doublet finder on existing data
+
+Analyse terminal paper first, then ageing.
+
+Performing it on msc8 Rstudio, see workflow 1 on msc8 files home directory.
+
+Documentation [here](https://bioconductor.org/packages/release/bioc/vignettes/DropletUtils/inst/doc/DropletUtils.html#reading-in-10x-genomics-data) suggests downsampling, though this might not be needed after filtering. This page also mentions identifying empty droplets
+
+## SUMMARY
+
+-   Had first weekly meeting with supervisors, should have run fastqc before cellranger counts to check for filtering, might return to this.
+
+-   Got Research Proposal mark back, sending feedback to supervisors
+
+-   Running start of R analysis on tunnelled msc8 Rstudio
+
+-   screen -r to check that data has been synrchonised to msc8
+
+## Notes from Nick
+
+-   GO would see more in deeper datasets, Ximerakis is shallow according to first cellranger counts file
+
+-   (to be verified) parameters from Nick to filter matrix files on: 35k reads, 1k genes, 5% mito (though this will be taken care of alot by first two filters)
+
+    -   use Nick's prefilter plots to determine if cutoffs are suitable
+
+-   use eddie R for integrating
+
+-   Doubletfinder: run for each papers separatley (incluing our own) to avoid erroneous doublet creation during process (unrelated samples, generated with completely different methods, will influence doublet creation and mcause mislabelling)
+
+```{r}
+#Seurat merging 
+<-merge(df1,y=c(df2,df3,etc))
+```
+
+## Next
+
+These are both saved to the shared group drive
+
+-   Read revised fastq and multiq outputs
+
+-   Look at all cellranger counts
+
+-   Return to R script (load Workflow1.Rdata") and read from [here](https://www.singlecellcourse.org/basic-quality-control-qc-and-exploration-of-scrna-seq-datasets.html#:~:text=Take%20a%20quick%20look%20at%20the%20dataset%3A)

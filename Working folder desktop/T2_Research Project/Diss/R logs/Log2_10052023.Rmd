@@ -1,0 +1,210 @@
+# 10/05/2023
+
+## Plan today
+
+1.  Read <https://doi.org/10.3389/fncel.2023.1173200>
+
+2.  Get STAR refernece genome job to work on Eddie
+
+    -   test it on msc8 first? will get errors back properly
+
+3.  Download the external datasets
+
+    -   Will require SRA toolkit, see NGG ICA1 to get insight, check how web page looked.
+    -   Look at experiments, do we need everything from both? probably not.
+        -   Check design, then look at supplementary files with run ID
+        -   make accession list for required packages.
+        -   plug in accordingly
+    -   Read <https://singlecell.zendesk.com/hc/en-us/articles/360061006171-SCP-Overview> to understand how to download SCP data
+
+4.  PICARD+QC (ideally)
+
+------------------------------------------------------------------------
+
+```{r}
+#To start a new session in the right place:
+setwd("C:/Users/s2268606/OneDrive - University of Edinburgh/Working folder desktop/XT1_Statistics and Data Analysis/R directory UNI/Project_23")
+```
+
+## 2. STAR work
+
+Running the following on **msc8**, saved as /home/s2268606/University_Directories/Project_personal_file/eddie_STAR_practice_day2.sh
+
+```{bash}
+
+#!/usr/bin/sh
+#$ -cwd #run in current working dir
+#$ -N Star_a1_2268606 #name of job
+#$ -l h_rt=05:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=16G #How much RAM is required
+#$ -e star_a1.e #where errors go
+
+#retrieve the files for generating genome indexes
+wget https://ftp.ensembl.org/pub/release-109/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz;wget https://ftp.ensembl.org/pub/release-109/gtf/mus_musculus/Mus_musculus.GRCm39.109.gtf.gz
+
+mkdir STAR_genome_mus_109
+
+module load roslin/star/2.7.10b
+
+STAR --runThreadN 2 --runMode genomeGenerate --genomeDir ./STAR_genome_mus_109 --genomeFastaFiles *primary_assembly.fa.gz --sjdbGTFfile *gtf.gz --sjdbOverhang -149
+```
+
+Got an error about wrong file type for primary assembly, so using pigz with default threads to unzip the gz files
+
+```{bash}
+pigz -d *gz -v #decompress verbosely anything which is compressed in the pwd
+#running STAR with uncompressed files
+STAR --runThreadN 2 --runMode genomeGenerate --genomeDir ./STAR_genome_mus_109 --genomeFastaFiles *primary_assembly.fa --sjdbGTFfile *gtf --sjdbOverhang -149
+
+#*addendum from 11/05/2023: the parameter --readFilesCommand zcat could have handled compressed file types.
+```
+
+This ran fine on msc8, so I aborted the command and will try on Eddie again with memory increase (ran on ms8 and used ps command to see how much memory i was using,
+
+```{bash}
+#ps -eo rss,pid,euser,args:100 --sort %mem | grep -v grep | grep -i $@ | awk '{printf $1/1024 "MB"; $1=""; print }'
+```
+
+then increased memory to be approximately that (25GB) Seems to be working ok (11:48 10/05/2023). Saved in Scratch space as Star_attempt_4.sh.
+
+```{bash}
+#!/usr/bin/sh
+#$ -cwd #run in current working dir
+#$ -N Star_a4_2268606 #name of job
+#$ -l h_rt=05:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=25G #How much RAM is required
+#$ -e star_a4.e #where errors go
+
+#retrieve the files for generating genome indexes
+#wget https://ftp.ensembl.org/pub/release-109/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
+#wget https://ftp.ensembl.org/pub/release-109/gtf/mus_musculus/Mus_musculus.GRCm39.109.gtf.gz
+
+source /etc/profile.d/modules.sh
+
+# Check amount of memory (in kbytes) as seen by the job
+ulimit -v
+
+#mkdir STAR_genome_mus_109
+module load roslin/star/2.7.10b
+
+STAR --runThreadN 2 --runMode genomeGenerate --genomeDir ./STAR_genome_mus_109 --genomeFastaFiles *primary_assembly.fa --sjdbGTFfile *gtf --sjdbOverhang -149
+
+```
+
+## 3. EXTERNAL DATA
+
+<https://github.com/ncbi/sra-tools/wiki> SRA toolkit, check if installed already
+
+SRA previous experience: SRR15436048 doi: 10.1186/s12864-022-08628-z
+
+```{bash} #This was not needed}
+#something similar to
+#adapted from https://github.com/ncbi/sra-tools/wiki/02.-Installing-SRA-Toolkit
+#download
+wget --output-document sratoolkit.tar.gz https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/current/sratoolkit.current-ubuntu64.tar.gz
+
+#Extract
+tar -vxzf sratoolkit.tar.gz
+
+#For convenience (and to show you where the binaries are) append the path to the binaries to your PATH environment variable:
+export PATH=$PATH:$PWD/sratoolkit.3.0.0-mac64/bin
+
+#test
+which fastq-dump
+fastq-dump --stdout -X 2 SRR390728
+
+#Get the files from SRA
+wget https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR15436048/SRR15436048 #annotate with name of paper, or reference for each
+```
+
+OR, generate an accession list as described in <https://www.ncbi.nlm.nih.gov/sra/docs/sradownload/> , prefectch is meant to beable to continue partial downloads too.
+
+<https://www.ncbi.nlm.nih.gov/sra?linkname=bioproject_sra_all&from_uid=532831> all runs selected and Send To-\>File-\> Accession list. converted to txt from csv, 'acc' removed from first line and txt dropped into server.
+
+```{bash}
+#download the accession data 
+prefetch --option-file SraAccList.txt
+#or
+prefetch -type fastq GSE129788 #worked too
+
+```
+
+Then convert them
+
+```{bash}
+
+#extract fastq from the SRA files, gzip it (takes a long time on NGG run)
+fastq-dump --gzip SRR15436048 SRR15436049 SRR15436050 SRR15436051
+
+fastq-dump --gzip  #to make fastq.gz files of the SRA runs
+```
+
+prefetch GSE129788 did not work on eddie but does work on msc8, error below
+
+```{bash}
+
+/exports/applications/apps/SL7/anaconda/5.3.1/bin/curl: error while loading shared libraries: libssl.so.1.0.0: cannot open shared object file: No such file or directory
+
+```
+
+Given that one file download is likely to take a while, I will split the data download jobs into two scripts. focussing on getting SRA queued today at this stage (15:31 10.05.2023). The following code will therefore be put in a separate file from the SRA data
+
+```{bash}
+#Ximerakis
+
+cd Ximerakis_etal_paper/Original_data_Ximerakis_etal
+
+cd ../..
+
+## Aux.1: Using conda
+
+After the conda code was run yesterday, I activated a project specific environment and installed SRA toolkit
+```
+
+```{bash}
+source activate project_test
+conda list --name project_test
+conda install -c bioconda sra-tools
+conda list --name project_test
+fastq-dump --stdout -X 2 SRR390728
+```
+
+I generated the following script to test the functionality of using my pre made conda env in Eddie, having to call in modules, activate the env, printing output from sratools to get some info in
+
+```{bash}
+#!/usr/bin/sh
+#$ -cwd #run in current working dir
+#$ -N bioconda_test #name of job
+#$ -l h_rt=0:01:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=2G #How much RAM is required
+#$ -e bioconda_test.e #where errors go
+#S -o bioconda_test.o #where the output goes
+
+source /etc/profile.d/modules.sh
+
+module load anaconda/5.3.1
+
+source activate project_test
+
+conda install -c bioconda sra-tools
+conda list --name project_test
+
+fastq-dump --stdout -X 2 SRR390728
+
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY of the day
+
+I didn't complete anything beyond first point because I was struggling to download data, I have submitted a download script for eddie which hardcodes the wget links for each acession as per NGG ICA1. I still think there is a better way. After some correspondence with Al, I have started downloading on msc8 too. IS helplione have been contacted.
+
+upn return, use:
+
+```{bash}
+screen -r
+```
+
+Got conda to work on Eddie now so that's good! need to look into the things at the top of the doc and in addition some consideration of eddie slot specification.
+
+Star script re-submitted because it was closed by Eddie early, new job ID 30324034

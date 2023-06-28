@@ -1,0 +1,130 @@
+# 19/05/2023
+
+## Plan today
+
++---------------+-------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------+
+|               | URGENT                                                                                                                                    | NOT URGENT                                                                                                                                  |
++===============+===========================================================================================================================================+=============================================================================================================================================+
+| IMPORTANT     | Set up alignment for our dataset with Parse or cellranger (identify what is suitable) (acutally not required, parse pipeline run already) | Cellranger workflow for Ximerakis                                                                                                           |
+|               |                                                                                                                                           |                                                                                                                                             |
+|               |                                                                                                                                           | -   read <https://bioinformaticsworkbook.org/dataAnalysis/RNA-Seq/Single_Cell_RNAseq/Chromium_Cell_Ranger.html#gsc.tab=0> for some guidance |
+|               |                                                                                                                                           |                                                                                                                                             |
+|               |                                                                                                                                           | -   CR_counts_Ximerakis.sh                                                                                                                  |
+|               |                                                                                                                                           |                                                                                                                                             |
+|               |                                                                                                                                           | -   Sort out read splitting for Ximerakis?                                                                                                  |
+|               |                                                                                                                                           |                                                                                                                                             |
+|               |                                                                                                                                           | -   Rename fastqs for cellranger to use                                                                                                     |
+|               |                                                                                                                                           |                                                                                                                                             |
+|               |                                                                                                                                           | Look at matrix file from terminal Slota paper, identify DGEs                                                                                |
++---------------+-------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------+
+| NOT IMPORTANT |                                                                                                                                           |                                                                                                                                             |
++---------------+-------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------+
+
+## Our data
+
+> How will I handle getting our data from the Datastore to run analysis, it's alot of data?
+
+Parse pipeline has already been run, unlfitered DGEs are at /exports/cmvm/eddie/eb/groups/mabbott_grp/NVerity/snRNAseq/expdata/A231222/combined/, directory is 25GB so selecting my data. Will start using R today to filter the data.
+
+```{bash}
+/exports/eddie/scratch/s2268606/Project_23/Group_data/group_data_retrieved.sh
+#was used to copy relevnat folders
+```
+
+## Ximerakis cellranger
+
+Just going to rename the fastqs to cellranger format with read set to 1 and lane set to one each. This didn't work. Tried splitting SRR8895023 with fastq-dump \--split-3 SRR8895023 -O Dumped/split_test/ but it still only made a single file.
+
+Downloading the original BAM file from [here](https://trace.ncbi.nlm.nih.gov/Traces/index.html?view=run_browser&page_size=10&acc=SRR8895023&display=data-access) , going to run [bamtofastq from cellranger](https://support.10xgenomics.com/docs/bamtofastq). Hopefully this will then work on cellranger counts. Running it as a job on eddie job ID 30458178.
+
+Alternative option is to try and deinterleave the fastq if possilbe. the commmand below was found [online](https://www.biostars.org/p/141256/), but needs amendment, because the dumped fastqs are four line pairs not eight line pairs (see code snippet).
+
+```{bash}
+#Original (not suitable for me)
+paste - - - - - - - - < reads-int.fq \
+    | tee >(cut -f 1-4 | tr "\t" "\n" > reads-1.fq) \
+    | cut -f 5-8 | tr "\t" "\n" > reads-2.fq
+    
+    
+#Amended, using an example
+time gunzip -c SRR8895024.fastq.gz |paste - - - - - - - - \
+    | tee >(cut -f 1-4 | tr "\t" "\n" > SRR8895024_reads_1.fq) \
+    | cut -f 5-8 | tr "\t" "\n" > SRR8895024_reads_2.fq
+```
+
+```{bash}
+(base) [s2268606@node3c03(eddie) Ximerakis]$ zcat Dumped/SRR8895023_S1_L001.fastq.gz | head -10
+
+@SRR8895023.1 1 length=57
+CAAAAAAAAAAAACCAAACAAAAAAAAAACAACAAAAAAACACACAACAAAAAAAAA
++SRR8895023.1 1 length=57
+A/A/AE/E/////EE/////AEA/A6//E/////6/A/EA//</AA<E//A//E//6
+@SRR8895023.2 2 length=57
+GGGAAAAAAAAAGAAAGAAAAAAAAAAGAATGATAAAAAAAAAAAAAAAAAAAAACC
++SRR8895023.2 2 length=57
+//////////////////////////////////////<EEAEAAEEE/A//////6
+@SRR8895023.3 3 length=57
+GGGGGGGGGGGGGAGAGAAAAAAAAAAAAAAAACAAAAAAACCAAAAAAAAAAAAAA
+```
+
+Diong some [reading](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/direct-demultiplexing), I found the indexing [barcodes for the paper's platform](https://www.10xgenomics.com/support/single-cell-gene-expression/documentation/steps/sequencing/sample-index-sets-for-single-cell-3) , which I downloaded from [here](https://cdn.10xgenomics.com/raw/upload/v1655155613/support/in-line%20documents/chromium-shared-sample-indexes-plate.csv) .
+
+Not sure I need to use this after all though, found [guidance](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count)to use a new parameter for CR count. Going to make up more of the fastq name then add this parameter and see what happens. Actually did not add this in the end as the program claims to detect the chemistry automatically.
+
+```{bash}
+#new paramter to try
+--chemistry SC3Pv2
+```
+
+new name of testing fastq: SRR8895023_S1_L001_R1_001.fastq.gz
+
+```{bash}
+#This command ran, going to adjust the loop and sample names accordingly and let it run on Eddie!
+cellranger count --id SRR8895023_CR --transcriptome /exports/eddie/scratch/s2268606/Project_23/Ensembl_refs/Cellranger_Mouse_genome/ --fastqs ./Dumped --sample SRR8895023
+```
+
+Accidentally deleted the split fast reads files from above
+
+samples renamed with ChatGPT:
+
+```{bash}
+mv SRR8895024.fastq.gz SRR8895024_S2_L002_R1_001.fastq.gz;
+mv SRR8895025.fastq.gz SRR8895025_S3_L003_R1_001.fastq.gz;
+mv SRR8895026.fastq.gz SRR8895026_S4_L004_R1_001.fastq.gz;
+mv SRR8895027.fastq.gz SRR8895027_S5_L005_R1_001.fastq.gz;
+mv SRR8895028.fastq.gz SRR8895028_S6_L006_R1_001.fastq.gz;
+mv SRR8895029.fastq.gz SRR8895029_S7_L007_R1_001.fastq.gz;
+mv SRR8895030.fastq.gz SRR8895030_S8_L008_R1_001.fastq.gz;
+mv SRR8895031.fastq.gz SRR8895031_S9_L009_R1_001.fastq.gz;
+mv SRR8895032.fastq.gz SRR8895032_S10_L010_R1_001.fastq.gz;
+mv SRR8895033.fastq.gz SRR8895033_S11_L011_R1_001.fastq.gz;
+mv SRR8895034.fastq.gz SRR8895034_S12_L012_R1_001.fastq.gz;
+mv SRR8895035.fastq.gz SRR8895035_S13_L013_R1_001.fastq.gz;
+mv SRR8895036.fastq.gz SRR8895036_S14_L014_R1_001.fastq.gz;
+mv SRR8895037.fastq.gz SRR8895037_S15_L015_R1_001.fastq.gz;
+mv SRR8895038.fastq.gz SRR8895038_S16_L016_R1_001.fastq.gz;
+```
+
+Script run again with job Id 30462172
+
+## Assessment of matrix file Slota (terminal paper)
+
+Matrix file already given by Nick at "U:\\Datastore\\CMVM\\eb\\groups\\mabbott_grp\\private\\Fraser\\Published datasets\\Terminal prion", going to retrieve it and start with Seurat/ doubletr finder. Scrublet was used in some literture, but [this paper shows marginally better accuracy in doubletfinder](https://www.sciencedirect.com/science/article/pii/S2405471220304592) . There is also a debate about python vs R here, but Im choosing R.
+
+I started looking into Doublet finder code, but came across [this](https://github.com/chris-mcginnis-ucsf/DoubletFinder):
+
+> *DoubletFinder takes the following arguments:*
+>
+> *seu \~ This is a fully-processed Seurat object (i.e., after NormalizeData, FindVariableGenes, ScaleData, RunPCA, and RunTSNE have all been run).*
+
+So I will need to run Seurat first, not done today
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Established that I only need to start from DGE matrix files for our own dataset, not run Parse pipeline
+
+Trying to generate fastq from bam for a test sample to see if this will generate the R1 nad R2 fastqs required for cellranger counts, waiting for job 30460680 to execute
+
+renamed fastqs for cell ranger counts to use Ximerakis data

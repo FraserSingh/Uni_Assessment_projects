@@ -1,0 +1,68 @@
+# 02/06/2023
+
+## Plan today
+
+Run doublet finder:
+
+-   Need to see if i can do it on a sample basis before merging or if post merge sample identification can be done.
+
+    -   [Best practices](https://github.com/chris-mcginnis-ucsf/DoubletFinder#best-practices-for-scrna-seq-data-generated-without-sample-multiplexing) say run on different samples at a time
+
+------------------------------------------------------------------------
+
+Look up no ground truth approach for pK identificaiton in doublet finder, FindVariableFeatures(selection.method) definition,
+
+Increase nfeatures=2000 in Ximerakis preprocessing?
+
+check [this](https://rpubs.com/kenneditodd/doublet_finder_example), overrides what i bulet point here:
+
+-   preprocess: Scale, Run PCA, Find Neighbours, Find clusters, runUMAP
+
+-   "Identify clusters with (A) low RNA UMIs, (B) High % mitochondrial reads, and/or (C) Uninformative marker genes.
+
+-   Remove clusters, pre-process again, and run DoubletFinder."
+
+-   integrate data? removes normalisation so don't
+
+-   split data again?
+
+-   Doubletfinder on each sample?
+
+-   integrate
+
+Do i need to run SCtransfrom first? [This section](https://www.singlecellcourse.org/single-cell-rna-seq-analysis-using-seurat.html#sctransform-normalization-and-clustering:~:text=size%3D10))-,8.3%20SCTransform%20normalization%20and%20clustering,-Since%20we%20have) says that it is good for finding rare cell populations, replacing NormalizeData, SclaeData and FindVariableFeatures as seen [here](https://htmlpreview.github.io/?https://github.com/satijalab/sctransform/blob/supp_html/supplement/seurat.html)
+
+Ran doublet finder but all cells were classffied singlets, at least in the first three samples. Not ideal! Rerunning in case i had overwritten data incorrectly? Not the case, even when re-running data script, it gave no doublets. Will need to revisit script.
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Need to substitute Normalise and Scale for SCT and add SCT parameters for the downstream commands
+
+might remove Rdata that is not Ximerakis_analysis.Rdata from msc8 thn sync changes
+
+Trying with one sample and running it throuhg, need to make pk as.numeric for doublet
+
+```{r}
+#trying to run doublet finder on one sample
+Ximerakis.list <- SplitObject(Ximerakis_total, split.by = "sample")
+Testing_dubF <- Ximerakis.list[[1]]
+Testing_dubF
+Testing_dubF <- NormalizeData(Testing_dubF)
+Testing_dubF <- SCTransform(object = Testing_dubF)
+Testing_dubF<-RunPCA(Testing_dubF)
+Testing_dubF<-RunUMAP(Testing_dubF, dims=1:20)
+Testing_dubF<-FindNeighbors(Testing_dubF, dims=1:20)
+Testing_dubF<-FindClusters(Testing_dubF)
+sweep.list <- paramSweep_v3(Testing_dubF, PCs = 1:20, sct = TRUE)
+sweep.stats <- summarizeSweep(sweep.list)
+bcmvn <- find.pK(sweep.stats)
+bcmvn.max <- bcmvn[which.max(bcmvn$BCmetric),]
+optimal.pk <- as.numeric(bcmvn.max$pK)
+annotations <- Testing_dubF@meta.data$seurat_clusters
+homotypic.prop <- modelHomotypic(annotations)
+nExp.poi <- round(optimal.pk * nrow(Testing_dubF@meta.data))
+nExp.poi.adj <- round(nExp.poi * (1 - homotypic.prop))
+Testing_dubF<- doubletFinder_v3(seu=Testing_dubF, PCs= 1:20, pK=optimal.pk, nExp = nExp.poi.adj, sct = TRUE)
+```

@@ -1,0 +1,35 @@
+# 01/06/2023
+
+## Plan today
+
+convert Ximerakis seurat read10x to seurat objects
+
+regenerate Slota graph for just hippocampus? split the data
+
+------------------------------------------------------------------------
+
+set up folder for analysis to be exported to, then run commands at the end of each session from msc8 to rsync data to the fodler on eddie
+
+run doubletfinder, should ne dome on distinct samples separately, input data should have been cleared of low-quality cells and should have clusters with low RNA UMIs/high mito read% and uninfomrative marker genes removed.
+
+ADJUST workflow accordingly, need to run doubletfinder before merging samples.
+
+Follow [this guide](https://www.youtube.com/watch?v=NqvAS4HgmrE&ab_channel=Bioinformagician) from bioinformagician, run qc for each sample first?
+
+Redo Slota script too
+
+Trying to search for mitochondrial genes in mouse is [different to humans](https://www.michaelchimenti.com/2019/03/calculate-mitochondrial-for-mouse-scrna-seq/). Did it, but this highlighted that the samples are currently held in the same overall Seurat object but with different sample preffixes to the names which are making the counts not add up for the same cell numbers. Need ot check notes for doubletfnider first
+
+began filtering the Seurat objects, following these videos to get things going
+
+[https://youtu.be/p49seH2_i8Y?t=](https://youtu.be/p49seH2_i8Y?t=312)[420](https://youtu.be/p49seH2_i8Y?t=420) sample splitting
+
+<https://youtu.be/NqvAS4HgmrE?t=723> doublet finder
+
+<https://youtu.be/5HBzgsz8qyk?t=994> Seurat analysis
+
+adjust the metadata sample naming to use sample names without the cr at the start
+
+------------------------------------------------------------------------
+
+## SUMMARY

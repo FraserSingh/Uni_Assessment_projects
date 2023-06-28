@@ -1,0 +1,139 @@
+# 12/05/2023
+
+## Plan today
+
+msc8 commands seemed to have worked, reference assembly for mouse with parralellisation (script saved to msc8 from Eddie, called Star_attempt_5.sh) worked fine, now have fastq files. Backed up genome assembly from Eddie to msc8 in 'Star_practice'.
+
+1.  Refine code from previous days by using successful stuff, store good code on msc8.
+
+2.  Back up genome assembly on msc8
+
+3.  Assemble reads from fastq files in Ximerakis data,
+
+    1.  Use cellranger for QC first?
+
+    2.  Could use process in FGT8 and 9 to generate fastqc, multiqc analysis. This then uses timmomatic bash script to remove adapters and Kallisto was used to align in parallel.
+
+4.  mapping them to the refernce genome
+
+------------------------------------------------------------------------
+
+## 1.Refining previous code
+
+The current linux command was supplied by the SCP support team, use this in final script? Would need to generate the https address from [here](https://singlecell.broadinstitute.org/single_cell/study/SCP1962/dysregulation-of-neuroprotective-astrocytes-a-spectrum-of-microglial-activation-states-and-altered-hippocampal-neurogenesis-are-revealed-by-single-cell-rna-sequencing-in-prion-disease#/) each time we want to run the script as there is a 30 minute cap on a code's use.
+
+```{bash}
+#Final code to download Slota data from SCP, obtain code from url linked above.
+curl "https://singlecell.broadinstitute.org/single_cell/api/v1/bulk_download/generate_curl_config?accessions=SCP1962&auth_code=zLrEXQSH&directory=all&context=study"  -o cfg.txt; curl -K cfg.txt && rm cfg.txt
+```
+
+## 2.Backup assembly
+
+Backing up assembly for refernce to msc8 from scratch space.
+
+```{bash}
+#copied working script from scratch space to msc8
+scp $USER@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/$USER/Project_23/Ensembl_refs/Star_attempt_5.sh /home/s2268606/University_Directories/Project_personal_file/Star_practice
+```
+
+Also need to run the functioning command in eddie for the fastqs to be working! realised this towards the end of the day, so the plan is to write and run a script for the STARsolo mapping (see later) on msc8 using the duimped fastqs, whilst I run the fasterq command on eddie overnight to make the fastqs on my scratch space. I could just scp the current ones on msc8 to the scratch space but I do't know if that will work regarding logs and auxiliary files created in the process of the command being executed.
+
+Do I want to make reference genome from cellranger mkref instead if I am going to use cellranger later? or is STAR comaptible?
+
+## 3.QC and Assembling reads from fastq Ximerakis
+
+installing cellrnager in conda env
+
+```{bash}
+#after conda hs been activated
+#donwloaded yml from eddie and added it
+scp $USER@eddie.ecdf.ed.ac.uk:/home/s2268606/project_test.yml ~/University_Directories/Project_personal_file/.
+/localdisk/home/ubuntu-software/Anaconda3/bin/conda-env create -n project_test_msc8 --file ./msc8_project_version_1.yml
+#moved yml to msc8 again later for STARsolo
+scp $USER@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/s2268606/Project_23/Ensembl_refs/msc8_project_version_1.yml
+/localdisk/home/ubuntu-software/Anaconda3/bin/conda-env create -n STAR_env_copy --file ./msc8_project_version_1.yml
+#tried to add cellranger:
+
+
+```
+
+Picard can convert fastq to sam? No, instead we are going to use cellranger which employs STAR alignment. I'll ask Nick if we need to use picard for anything when he's back. Cellranger has details in *How to perform the data analysis* [here](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/tutorials/gex-analysis-nature-publication)., corroborated by Wellcome guide. (overview on p97) Ximerakis data was generated with Chromium Single Cell 3' v2, so the whitelist file which details the CB and UMI for the platform is 737K-august-2016.txt
+
+```{bash}
+#get whitelist for CBs and UMIs
+wget https://github.com/10XGenomics/cellranger/raw/master/lib/python/cellranger/barcodes/737K-august-2016.txt
+```
+
+### A note on mapping Ximerakis reads with STARsolo
+
+See *3 Running mapping jobs.* in the [Star manual](https://physiology.med.cornell.edu/faculty/skrabanek/lab/angsd/lecture_notes/STARmanual.pdf).
+
+The STAR solo algorithm is turned on with: \--soloType Droplet. The cell barcode whitelist has to be provided with: \--soloCBwhitelist /path/to/cell/barcode/whitelist
+
+*However, it has been noted in several publications that pseudoalignment-based methods falsely map reads from retained introns to the transcriptome (Melsted et al, 2021; Srivastava et al, 2020). It is [well known](https://t.co/maED24oFeA?amp=1) that scRNA-seq experiments, and, in particular, single-nucleus RNA-seq can contain a very high percentage of transcripts with retained introns. This erroneous assignment makes hundreds of non-expressed genes look weakly expressed, which may substantially influence the downstream analysis, particularly marker selection (Kaminow et al, 2021).*
+
+```{bash}
+$(ls -m *.fastq | tr -d ' ' | tr -d '\n') 
+```
+
+#### Sam's daily advice:
+
+UMAPs might be better than t-SNE maps. more distinct clusters, better at preserving global clusters particulalry for larger datasets.
+
+In bulk seq, we'd expect PCA to look similar between replicates, verfies that samples are of good quality as we expect similar clusters in PCA in similar samples. Gene expression profiles in sc , PCA is metagene informtion for what can be used to dtermine cluster and ID for use in UMAP and t-SNE. When running clustering, PCA plot will be colour coded.
+
+## Notes
+
+FGT_T8_RNA-seq.Rmd has details on making R objects for DESeq to use, DESeq2 might be different but good startng point.
+
+**FGT_T9_Single_Cell_RNA-seq files detail a good workflow, mentions cell cycle annotation, should I add this to our analyses? Might just be a tradeoff between resource demand and information addition Using cyclone**
+
+[**singlecellcourse.org/processing-raw-scrna-seq-sequencing-data-from-reads-to-a-count-matrix.html:**]{.underline}
+
+*In contrast to bulk RNA-seq, scRNA-seq deals with a much smaller amount of RNA, and more PCR cycles are performed. Thus, UMI barcodes become very useful and are now widely accepted in scRNAseq. Library sequencing is often done with paired-end reads, with one read containing CB + UMI (read 1 in 10x Chromium), and the other containing actual transcript sequence (read 2 in 10x Chromium)*
+
+*A classical scRNA-seq workflow contains four main steps:*
+
+-   *Mapping the cDNA fragments to a reference;*
+
+-   *Assigning reads to genes;*
+
+-   *Assigning reads to cells (cell barcode demultiplexing);*
+
+-   *Counting the number of unique RNA molecules (UMI deduplication).*
+
+*The outcome of this procedure is a gene/cell count matrix, which is used as an estimate of the number of RNA molecules in each cell for each gene.*
+
+\*[...] When the input to the assay consists of nuclei, a high percentage of the reads comes from the unspliced transcripts and align to introns. In order to count these intronic reads, the "cellranger count" and "cellranger multi" pipelines can be run with the option include-introns.
+
+[...] However, to read the output of the popular tool cellranger (used to quantify 10x Chromium data), there is a dedicated function in the DropletUtils package, which simplifies the process of importing the data. Here is an example usage:\*
+
+```{r}
+library(DropletUtils)
+# importing the raw count data
+sce <- read10xCounts("data/pbmc_1k_raw")
+# importing the pre-filtered count data
+sce <- read10xCounts("data/pbmc_1k_filtered")
+
+#DropletUtils::read10xCounts().
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Ask for chat about using STARsolo vs. cellranger- if i use cellranger, i don't need starsolo at all because cellranger needs to make its own reference genome.
+
+Should i be doing any qc before all of this? Fastqc and trimming etc Asked Simon
+
+cell cyle annotation possibly?
+
+-   **need to set up git (Done)**
+
+-   scratch now mirrors msc8 structure
+
+-   made script for STarsolo map, to run on msc8 screen in \~/University_Directories/Project_personal_file/External_datasets/Ximerakis/Dumped
+
+    -   Ximerakis data is present in gz format on eddie, script will need editting before running there
+
+-   does remove non-canonical juncitons in STAR address the intron issue with pseudoaligners? Does this afffect the use of STARsolo which has the intro weakness mentioned above?

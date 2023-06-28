@@ -1,0 +1,59 @@
+# 06/06/2023
+
+## Plan today
+
+Supervisor meeting
+
+Slota paper subset and doublet finder stage
+
+Change filters on Ximerakis (plot nUMI and nGene separately with density to determine filters)
+
+Load out data and do the same filtering and doublet
+
+Our data will need to be transposed, and syntax changed to use Seurat Objects
+
+------------------------------------------------------------------------
+
+## Changing filters on Ximerakis
+
+Re-ran Ximerakis total loading, subset by mito \<20%, [rRNA annotation](https://www.informatics.jax.org/quicksearch/summary?queryType=exactPhrase&query=ribosomal+RNA&submit=Search+Again) is Rn, ribosomal protein is Rp
+
+genes vs counts
+
+Sequencing saturation is actually ok because curves are all following similar trend, so technical sequencing has been performed to a satisfactory level.
+
+plot ribosomal vs mitochondrial to see levels of alive vs dead cells. Justify why cells with low UMIs can be thrown out.
+
+Filter by mito % and see curve or filter by genes first and see curve.
+
+## Slota
+
+If they haven't filtered by mito then they won't have done normalisation
+
+## Cellranger count
+
+check default behaviours for multimap reads and intronic regions (do intronic or genomic multimaps get thrown out?)
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Identified with Nick that my filtering was worng and that I have not looked at the data in enough detail. returned to Ximerakis data for filtering and will do some Slota (basic visualisation) and Verity data (loading and basic treatment) tonight.
+
+Saved some graphs of the Ximerakis shapes to outputs, return to the filtering process for this tomorrow. Filter of at least 20 reads is a good start, but might still give alot of mitochondrial reads and dead cells. I want to visualise reads by mt once fitlered by read count of at least 20.
+
+Want to synchronise the folders from one drive to that in shared group folder on datastore computer access.
+
+## Notes from Nick
+
+Compare datast in prions hip to ctx: do trajectory and and see if ctx follows a path similar to the Hip infected in prions or ageing.
+
+Expect biology papers from Nick
+
+Keep filters to a mnimm and apply them more stringently until data is QC suitable.
+
+We do technical QC to se if read quality is alright, and bioloigcal QC to remove contamination from true biological signal.
+
+Will need ot integrate the datasets with Harmony at some point
+
+Aged brain will show more cell death in sequencing datasets because the cells are less elastic and more susceptible to chemical stressors seen in sequncing preparation such as transcription blocking.

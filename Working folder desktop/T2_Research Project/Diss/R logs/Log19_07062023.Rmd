@@ -1,0 +1,66 @@
+# 07/06/2023
+
+## Plan today
+
+AM Finish loading Verity data
+
+Issues with gene names and transcript variants causing duplicates?
+
+adding cellnames
+
+PM Load Slota and run some EDA and QC like Ximerakis
+
+Compare Nick's QC to my Ximerakis and Slota QC outputs
+
+------------------------------------------------------------------------
+
+## Verity annotation
+
+gene names could be separated by \\
+
+Trying to add cellnames to the rownames of the matrix file, but having issues with dimensions
+
+Got it in the end, i wasn't slicing the metadata properly. When slicing the gene names for rownames in the matrix file, there were duplicates as indicated by Nick, so I need to mark the duplicates uniquely.
+
+I also need to find the cell numbers which aren't present.
+
+It seems that parse data [can be loaded](https://support.parsebiosciences.com/hc/en-us/articles/360053078092-Seurat-Tutorial-65k-PBMCs). I've tried runing the cell to load all of the data into a merged Seurat object, but might have to get an idea of QC from one or two samples first before doing it for the whole dataset.
+
+The dataset loaded in fine, but getting warning for each dataset, to do with assigning metadata to the matrix file i think. I assume it's just the cells had no reads, but i'd like to quantify how many are not there.
+
+```         
+Warning: Some cells in meta.data not present in provided counts matrix
+```
+
+## Whilst waiting for Rstudio to get back up
+
+I had exceeded file storage on msc8 by accident, so waiting for files to be removed.
+
+Reading the combines parse log from the shared drive.
+
+```{bash}
+#4191 PCA using 2843 highly variable genes
+#2 SFR_CLUST_DIFF_EXP Row_1_of_821       cluster             gene_id           gene_name  genome    score  log2_FC   pct1   pct2    pval_adj
+#2 SFR_CLUST_DIFF_EXP Row_2_of_821  0          1  ENSMUSG00000054889                 Dsp  mus108    9.996    2.856  0.390  0.111   0.000e+00
+#2 SFR_CLUST_DIFF_EXP Row_3_of_821  1          1  ENSMUSG00000028011                Tdo2  mus108    8.463    2.717  0.051  0.016   2.063e-10
+#2 SFR_CLUST_DIFF_EXP Row_4_of_821  2          1  ENSMUSG00000043013             Onecut1  mus108    8.245    2.633  0.247  0.079  1.314e-304
+#2 SFR_CLUST_DIFF_EXP Row_5_of_821  3          1  ENSMUSG00000040998                Npnt  mus108    7.513    2.550  0.408  0.138   0.000e+00
+#2 SFR_CLUST_DIFF_EXP Row_6_of_821  4          1  ENSMUSG00000086902             Gm11728  mus108    7.404    2.618  0.053  0.019   3.530e-10
+```
+
+Reading lib1 parse log, need to google where to find details about filtering, umap parameters etc
+
+```{bash}
+17916 #2 PCA using 2885 highly variable genes
+
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Removed cellranger yard from each folder, might need to reinstall if required for analysis.
+
+## Notes from Nick
+
+Maybe try and get through to differential gene expression quickly then refine stuff in the pipeline rather than work through the pipeline correcting as you go

@@ -1,0 +1,65 @@
+# 20/06/2023
+
+## Plan today
+
+Get Verity data sorted (QC,
+
+Read and understand Harmony required input etc.
+
+Integrate
+
+Clustering
+
+------------------------------------------------------------------------
+
+## Slota data
+
+Ended up contacting Slota authors [stephanie.booth\@phac-aspc.gc.ca](mailto:stephanie.booth@phac-aspc.gc.ca){.email} and [jessy.slota\@phac-aspc.gc.ca](mailto:jessy.slota@phac-aspc.gc.ca){.email} to ask about the structure of the available data. It turns out that the matrix.mtx " file corresponds to raw read counts for the final (integrated) single-cell atlas. While the read counts in this file are non-normalized, this matrix was filtered as described in the methods section of our paper (using SoupX, removing cells with high mitochondrial reads and low n genes, and using DoubletFinder)." The original cellranger counts were then uploaded by the authors, and the pubblication's data was downloaded in bulk with the website bulk download feature and the follow command (get the url from the website).
+
+```{bash}
+curl -k "https://singlecell.broadinstitute.org/single_cell/api/v1/bulk_download/generate_curl_config?accessions=SCP1962&auth_code=VnryYEj9&directory=all&context=study" -o cfg.txt; curl -K cfg.txt && rm cfg.txt
+
+unzip SCP1962/other/raw_mtxs.zip SCP1962/other/
+```
+
+This gave the three following files for each sample, but no empty cell files from cellranger!!! No bueno.
+
+```{r}
+
+PBS25HP_barcodes.tsv.gz
+PBS25HP_features.tsv.gz
+PBS25HP_matrix.mtx.gz  
+```
+
+Could set up empty droplets as required for Verity data with the [runEmptyDrop](https://rdrr.io/github/compbiomed/singleCellTK/man/runEmptyDrops.html)
+
+## Verity wrangling
+
+When integrating, tailor the sample list in VerityWorkflow for the samples required for integration at the time.
+
+Much of the metadata is lost by the time it is in the final form of the merged object. It appears this occurs during te CreateSeuratObject. Could manually add metadata for each column, but would be alot fo data.
+
+Should find out what happens to gene duplicates.
+
+### Verity sample annotations reminder
+
+| Sample name | ???     | Treatment |
+|-------------|---------|-----------|
+| sample 1    | 69 & 70 | NBH VEH   |
+| sample 2    | 72 & 73 | NBH VEH   |
+| sample 5    | 79 & 80 | ME7 VEH   |
+| sample 6    | 82 & 83 | ME7 VEH   |
+| sample 9    | 57 & 58 | AGING VEH |
+| sample 11   | 63 & 64 | AGING VEH |
+
+## Harmony research
+
+Quick start to Harmony • harmony: <https://portals.broadinstitute.org/harmony/articles/quickstart.html>
+
+Single-cell RNA-seq: Integration with Harmony \| Introduction to single-cell RNA-seq: <https://hbctraining.github.io/scRNA-seq_online/lessons/06a_integration_harmony.html>
+
+[UMAP integration literature which Neil was invovled in](https://www.nature.com/articles/s41467-022-33542-z)
+
+[Harmony takes normalised gene expression matrices and performs PCA](By%20default,%20Harmony%20accepts%20a%20normalized%20gene%20expression%20matrix%20and%20performs%20PCA.%20Since%20here%20we%20already%20have%20the%20PCs,%20we%20specify%20do_pca=FALSE.%20The%20matrix%20harmony_embeddings%20is%20the%20matrix%20of%20Harmony%20corrected%20PCA%20embeddings.)
+
+## SUMMARY

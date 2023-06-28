@@ -1,0 +1,113 @@
+# 18/05/2023
+
+## Plan today
+
+-   check cellranger genome
+    -   Had to make cellranger accessible to script last night
+-   achieve yesterday's goals
+-   merge Exnertal dataset with Project space, use stage in and out properly ✅
+-   Run stageout ✅
+    -   Currently making folder in group space called Project_space, when I want to be using the Poject_23 folder instead
+
+    -   Wait until stageout is done then check if Project_23 has updated. It worked
+-   Assess Fastqc and multiQC of Ximerakis data ✅
+    -   Use cellranger on ximerakis if quality is fine to make matrix file from fastqs
+-   Begin aligning our data to cellranger genome too? (check parse pipeline)
+    -   Then cellranger count [Running cellranger count -Software -Single Cell Gene Expression -Official 10x Genomics Support](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/tutorial_ct) ; [Analyze scRNA-Seq Data From a Publication Using 10x Software -Software -Single Cell Gene Expression -Official 10x Genomics Support](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/tutorials/gex-analysis-nature-publication)
+
+    -   Set up Parse pipeline environment
+-   Get relevant samples from our data and unblind by looking at sample annotation in shared drive, start to filter data?
+-   Look at matrix file from terminal Slota paper
+
+By end of the week:
+
+-   general plots of read per cell, filtering data is first subjcetive decision I have to make
+
+------------------------------------------------------------------------
+
+## Data info for matrix analysis
+
+I need samples which don't have IFNG (samples 1,2,5,6,9,11). Leaving an N of 6?
+
+|               |             | Inoc      | Treatment |
+|---------------|-------------|-----------|-----------|
+| **sample 1**  | **69 & 70** | **NBH**   | **VEH**   |
+| **sample 2**  | **72 & 73** | **NBH**   | **VEH**   |
+| sample 3      | 74 & 75     | ME7       | IFNG      |
+| sample 4      | 77 & 78     | ME7       | IFNG      |
+| **sample 5**  | **79 & 80** | **ME7**   | **VEH**   |
+| **sample 6**  | **82 & 83** | **ME7**   | **VEH**   |
+| sample 7      | 84 & 85     | NBH       | IFNG      |
+| sample 8      | 86 & 88     | NBH       | IFNG      |
+| **sample 9**  | **57 & 58** | **AGING** | **VEH**   |
+| sample 10     | 60 & 61     | AGING     | IFNG      |
+| **sample 11** | **63 & 64** | **AGING** | **VEH**   |
+| sample 12     | 66 & 67     | AGING     | IFNG      |
+
+: *NBH= Normal Brain Homogenate, ME7 strain of prions, VEH is vehicle control for IFNG treatment*
+
+```{bash}
+#new parameter for Eddie jobs
+
+#$ -M yourUUN@ed.ac.uk    #contact info
+#$ -m beas    #notify if job begins, ends, aborts or suspends
+
+```
+
+So the template for Eddie scripts is now:
+
+```{bash}
+#!/usr/bin/sh
+#$ -cwd             #run in current working dir
+#$ -N <job name>    #name of job
+#$ -l h_rt=04:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=8G     #How much RAM is required
+#$ -pe sharedmem 3  #how many cores?
+#$ -e <jobname>.e     #where errors go
+#$ -hold_jid <specified job name of the proceeding script>
+#$ -M S2268606@ed.ac.uk    #contact info
+#$ -m beas 
+```
+
+## Ximerakis MultiQC assessment
+
+File found at /exports/eddie/scratch/s2268606/Project_23/External_datasets/Ximerakis/multiqc_report.html . Shows issues with Per Base Sequence Content (where I would usually be happy with some poor quality from primers, these irregular base prevalences continue for over 20 bp of most of the samples' reads).
+
+Per Sequence GC Content was also alot of warnings and two failures (although % of reads is low on ya xis, so it's fine overall?). All adapter content signals were within 5% and acceptable. However, Samples SRR8895026 and SRR8895028 both flagged in GC content as failures. They also both had the most imbalanced per base sequence content, and SRR8895026 also had some of the fewest read totals in the experiment.
+
+![Generated from MultiQC on ximerakis dataset](images/fastqc_per_sequence_gc_content_plot.svg)
+
+From the original Ximerakis publicaiton on data generation: "*Briefly, polyadenylated RNA, from total RNA (7.5--25 ng; RNA integrity number (RIN) values \> 6.5) extracted from our FACS-purified cells, with ERCC Spike-in control Mix A (Ambion) at 10−6 final dilution, was converted to cDNA and decorated with universal adapters, sample-specific barcodes and UMI with a template-switching reverse transcriptase.*"
+
+I don't think I'll be trimming the reads based on these quality metrics, since the beginning portion is the most badly affected and I don't want to through away biological signal.
+
+## Ximerakis cellranger cellcounts
+
+I think I need to run cellcounts separately for each fastq file from Ximerakis because each is a different sample as shown [here](https://www.ncbi.nlm.nih.gov/Traces/study/?acc=PRJNA532831&o=acc_s%3Aa).
+
+Started script
+
+------------------------------------------------------------------------
+
+## To do next
+
+Establish what needs to be done with our data
+
+Continue editting /exports/eddie/scratch/s2268606/Project_23/External_datasets/Ximerakis/CR_counts_Ximerakis.sh
+
+-   tried to run but errors coming up with suggestion to refer to fastq inputting (<https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/fastq-input>). Maybe I should ask fastq dump to make bcl files instead of fastq so that the cellranger workflow is used earlier and it's happy with the inputs. Alternatively, might need to rename samples to get better results. consult SRA for potential names. See thread <https://kb.10xgenomics.com/hc/en-us/articles/115003802691-How-do-I-prepare-Sequence-Read-Archive-SRA-data-from-NCBI-for-Cell-Ranger->
+    -   tried running fastq dump with splitting but got an error:
+
+        Entity: line 1: parser error : xmlParseEntityRef: no name
+
+        cell RNA-seq libraries were prepared using the Chromium Single Cell 3' Library &
+
+        \^
+
+        Entity: line 1: parser error : chunk is not well balanced
+
+        riptor\>\<Bioproject\>PRJNA532831\</Bioproject\>\<Biosample\>SAMN11415846\</Biosample\>
+
+        was working on /exports/eddie/scratch/s2268606/Project_23/External_datasets/Ximerakis/fastq_scripting_splitting.sh
+
+whatever else

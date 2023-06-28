@@ -1,0 +1,220 @@
+# 22/06/23
+
+## Plan today
+
+Check on cellranger redux output, do clearing as mentioned yesterday
+
+Run emptydroplets
+
+SoupX slota
+
+expand to Verity
+
+Integrate
+
+------------------------------------------------------------------------
+
+## Cellranger update
+
+The script was run in the grouploc, not scratch! eek Also names were being overwritten, so output was not good. Have adjusted script and running it.
+
+Re running cellranger coutns with their 2020 reference genome did infact give higher genes detected and higher exonic mappings. Mappings to genome did not change though.
+
+Running cellranger_filter_genome.sh in scratch space Ensembl_refs folder to eliminate "[non-polyA](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/tutorial_mr#filter:~:text=primary_assembly.fa.gz-,Filter%20the%20GTF,mapped%2C%20they%20are%20not%20counted.%20See%20these%20resources%20for%20further%20information%3A,-Check%20for%20multi) transcripts that overlap with protein-coding gene models [from the Mus_musculus.GRCm39.109.gtf file] . These entries can cause reads to be flagged as mapped to multiple genes (multi-mapped) because of the overlapping annotations. In the case where reads are flagged as multi-mapped, they are not counted." My hope is that this will explain some of the lower mappings to exonic regions. The jobs for making the reference genome is 31050635 and for making the counts in scratch with my fitlered but new reference genome is 31050639.
+
+Any redux stuff in bioinfmsc8 and scratch space is the new refernece but filtered, not celllranger' srecommended one
+
+## Using Ximerakis for emptydrops testing
+
+```{r}
+expression_matrix <- ReadMtx("/home/s2268606/University_Directories/Project_23/External_datasets/Ximerakis/crOX1X/outs/")
+Xim1 <- CreateSeuratObject(counts = expression_matrix)
+
+Xim1<-Read10X("/home/s2268606/University_Directories/Project_23/External_datasets/Ximerakis/crOX1X/outs/raw_feature_bc_matrix")
+Xim1_obj<-CreateSeuratObject(counts=Xim1, project="Slota")
+
+#Create metadata variable to edit it without affecting core data
+metadata_test<-Xim1_obj@meta.data
+
+#Saving cell barcodes as metainfo
+metadata_test$cells<-rownames(metadata_test)
+
+metadata_test <- metadata_test %>%
+    dplyr::rename(nUMI = nCount_RNA,
+                  nGene = nFeature_RNA)
+
+
+metadata_test %>% 
+    ggplot(aes( x=nGene, fill= nGene)) + 
+    geom_density(alpha = 0.2) + 
+    theme_classic() +
+    scale_x_log10() + 
+    geom_vline(xintercept = 300)+
+    ggplot2::ggtitle("Distribution of genes per cell", subtitle="Ximerakis, filtered to minimum 20 genes")
+```
+
+```{r}
+#This worked, going to continue workflow, so it's a case of files being int he correct names and folders for each folder. will just take some bash scripting with a list of names.
+out<-emptyDrops(Xim1_obj@assays$RNA@counts,niters= 10000)
+is.cell <- out$FDR <= 0.001
+sum(is.cell, na.rm=TRUE)
+table(Sig=is.cell, Limited=out$Limited)
+```
+
+I think I'm loading the unfiltered entire matrix here, which would avoid having to laod the individual matrix files and sort edm into their own folders. Nope! this is the soup-less file, so will need to go from raw files in the raw_mtrcs.zip.
+
+```{r}
+
+Slota1<-Read10X("/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/expression/6308ef3e9865dcb2591533d6")
+Slota1_obj<-CreateSeuratObject(counts=Slota1, project="Slota")
+
+#Create metadata variable to edit it without affecting core data
+metadata_test<-Slota1_obj@meta.data
+
+#Saving cell barcodes as metainfo
+metadata_test$cells<-rownames(metadata_test)
+
+metadata_test <- metadata_test %>%
+    dplyr::rename(nUMI = nCount_RNA,
+                  nGene = nFeature_RNA)
+
+
+metadata_test %>% 
+    ggplot(aes( x=nGene, fill= nGene)) + 
+    geom_density(alpha = 0.2) + 
+    theme_classic() +
+    scale_x_log10() + 
+    geom_vline(xintercept = 300)+
+    ggplot2::ggtitle("Distribution of genes per cell", subtitle="Ximerakis, filtered to minimum 20 genes")
+```
+
+### extracting slota raw hopefully
+
+```{bash}
+cd Slota/SCP1962/other; mkdir raw_stuff ;mkdir formatted ; mv raw_mtxs.zip raw_stuff/ ; mv *.gz formatted/ 
+
+cd raw_stuff
+
+unzip raw_mtxs.zip
+
+echo "PBS25HP PBS48HP PBS60CX PBS61CX RML132HP RML134HP RML142CX PBS73CX RML138CX RML142HP PBS48CX RML133CX RML138HP RML145CX RML122CX RML133HP RML138HP RML145HP RML140CX RML122HP RML134CX RML140HP RML132CX" > ../../../Slota_samples.txt
+
+for sample in $(cat ../../../Slota_samples.txt); do mkdir ${sample}dir; mv ${sample}* ${sample}dir;done
+
+for sample in $(cat ../../../Slota_samples.txt);  
+do
+cd ${sample}dir; 
+mv ${sample}_barcodes.tsv.gz barcodes.tsv.gz; 
+mv ${sample}_features.tsv.gz features.tsv.gz; 
+mv ${sample}_matrix.mtx.gz matrix.mtx.gz; 
+cd ..; 
+done
+```
+
+## Trying again with supposed raw matrices
+
+```{r}
+# Create list of folder names
+sample_names<- readLines("/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/Slota_samples.txt")
+#rename them for Slota folders
+folder_names <- paste0(sample_names,"dir")
+
+# Loop through each folder to process it
+for (folder_name in folder_names) {
+  folder_path=paste0("/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/raw_stuff/",folder_name)
+  
+  
+  current_data<-Read10X(data.dir =folder_path)
+  current_obj<-CreateSeuratObject(counts=current_data, project="Slota")
+  
+  out<-emptyDrops(current_obj@assays$RNA@counts,niters= 10000)
+  is.cell <- out$FDR <= 0.001
+  sum(is.cell, na.rm=TRUE)
+  table(Sig=is.cell, Limited=out$Limited)
+  
+  current_cells <- current_obj@assays$RNA@counts[,which(is.cell),drop=FALSE]
+  current_drops<- current_obj@assays$RNA@counts[,which(is.cell),drop=TRUE]
+  
+  
+  assign(paste0(folder_name,"_cells"), current_cells)
+  assign(paste0(folder_name,"_object"), current_obj)
+  assign(paste0(folder_name,"_drops"), current_drops)
+  
+}
+metadata_test<-current_obj@meta.data
+#Saving cell barcodes as metainfo
+metadata_test$cells<-rownames(metadata_test)
+metadata_test <- metadata_test %>%
+dplyr::rename(nUMI = nCount_RNA,
+nGene = nFeature_RNA)
+metadata_test %>%
+ggplot(aes( x=nGene, fill= nGene)) +
+geom_density(alpha = 0.2) +
+theme_classic() +
+scale_x_log10() +
+geom_vline(xintercept = 300)+
+ggplot2::ggtitle("Distribution of genes per cell", subtitle="Ximerakis, filtered to minimum 20 genes")
+```
+
+This plot showed that the data is in factstill the soup-less data, so I'm going to accept that and move on, stating that data curation allowed me to only work from SoupX-ed data for Slota.
+
+## Applying it to Verity
+
+```{r}
+out<-emptyDrops(Verity_total_labelled@assays$RNA@counts,niters= 10000)
+is.cell <- out$FDR <= 0.001
+sum(is.cell, na.rm=TRUE)
+table(Sig=is.cell, Limited=out$Limited)
+
+#        Limited
+# Sig       FALSE    TRUE
+#   FALSE 1538807   67718
+#   TRUE     6285   57117
+
+#Running this gave sig=false & Limited=True of 67718, meaning we need to increase niters. I will try to double it, but will probably subset data to do this if it's going to take so long and be so dmenading!
+
+#using BPPARAM=MulticoreParam() made the job parrallel, but I'm not sure it benefitted at all, except the false positives were lower??
+
+#Either make the 
+Verity_total_labelled_cells <- Verity_total_labelled@assays$RNA@counts[,which(is.cell),drop=FALSE]
+
+
+Verity_total_labelled_drops<- Verity_total_labelled@assays$RNA@counts[,which(is.cell),drop=TRUE]
+
+
+metadata_test<-current_obj@meta.data
+#Saving cell barcodes as metainfo
+metadata_test$cells<-rownames(metadata_test)
+metadata_test <- metadata_test %>%
+dplyr::rename(nUMI = nCount_RNA,
+nGene = nFeature_RNA)
+metadata_test %>%
+ggplot(aes( x=nGene, fill= nGene)) +
+geom_density(alpha = 0.2) +
+theme_classic() +
+scale_x_log10() +
+geom_vline(xintercept = 300)+
+ggplot2::ggtitle("Distribution of genes per cell", subtitle="Ximerakis, filtered to minimum 20 genes")
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Slota is good to go with curated data for integration
+
+droplet ID apparently run on Verity data, generating Large cdgMatrices Verity_total_cells and Verity_total_drops. Need to load them into SoupX workflow and move onto clustering from there.
+
+Need clustering info for verity to use Soup properly, run loading and clustering, then export that info?
+
+Just need to make Seurat objects with ReadParseBio? one raw and one filtered, expects "DGE.mtx", "cell_metadata.csv", "all_genes.csv".
+
+Ximerakis counts is being run atm with job ID 31060102, run multiqc and inspect the cellrangerMultiQC_Redux_1.html equivalent for summary stats and potential new cellranger output for that dataset.
+
+remove copyXiemrakis.txt and revert CR_counts_redux.sh using github
+
+Running MultiQC on Ximerakis 31083742, the mapping was better! so eliminating the non-poly overlapping annotations helped. Redux files and scripts should be used instead.
+
+need to write cellranger counts for ReduxOX6X again. 31083973
+
+do not run Project_update.sh!

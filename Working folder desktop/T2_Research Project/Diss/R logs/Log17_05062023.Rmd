@@ -1,0 +1,100 @@
+# 05/06/2023
+
+## Plan today
+
+Try and get doublet finder running for one sample, then loop for the rest.
+
+Start loading our data, alternatively treat Slota paper with preprocessing.
+
+------------------------------------------------------------------------
+
+## DoubletFinder attempt
+
+made optimal.pk a numeric object, so hopefully it is used properly by doubletfinder. This ran the tool correctly but everything was identified as Doublet in OX1X! Going to check what might be causing this classifcation. Need to work out proper doublet expected rate according to number of cells ([can be done by looking at](https://github.com/chris-mcginnis-ucsf/DoubletFinder/issues/76) number of cells loaded "[For every sample, 17,400 cells were loaded into a Chromium Single Cell 3′ Chip (10x Genomics) and processed following the manufacturer's instructions](https://www.nature.com/articles/s41593-019-0491-3#Sec12)" or number of cells recovered, which would be around 1272 after filtering for sample OX1X, 0.063% rate). With over 16,000 cells loaded, this means a rate of about 8.7% (0.4% for every 800 cells loaded).
+
+```{r}
+#trying to run doublet finder on one sample
+Ximerakis.list <- SplitObject(Ximerakis_total, split.by = "sample")
+Testing_dubF <- Ximerakis.list[[1]]
+Testing_dubF
+Testing_dubF <- NormalizeData(Testing_dubF)
+Testing_dubF <- SCTransform(object = Testing_dubF)
+Testing_dubF<-RunPCA(Testing_dubF)
+Testing_dubF<-RunUMAP(Testing_dubF, dims=1:20)
+Testing_dubF<-FindNeighbors(Testing_dubF, dims=1:20)
+Testing_dubF<-FindClusters(Testing_dubF)
+
+sweep.list <- paramSweep_v3(Testing_dubF, PCs = 1:20, sct = TRUE)
+sweep.stats <- summarizeSweep(sweep.list)
+bcmvn <- find.pK(sweep.stats)
+
+bcmvn.max <- bcmvn[which.max(bcmvn$BCmetric),]
+optimal.pk <- as.numeric(bcmvn.max$pK)
+
+annotations <- Testing_dubF@meta.data$seurat_clusters
+homotypic.prop <- modelHomotypic(annotations)
+nExp.poi <- round(0.087 * nrow(Testing_dubF@meta.data)) #######FIXME
+nExp.poi.adj <- round(nExp.poi * (1 - homotypic.prop))
+
+Testing_dubF<- doubletFinder_v3(seu=Testing_dubF, PCs= 1:20, pK=optimal.pk, nExp = nExp.poi.adj, sct = TRUE, pN=0.25)
+```
+
+With this adjusted code, there was a mix of doublets and singlets, but the number of doublets was exactly that of the expected.adjusted doublets:
+
+```         
+Doublet Singlet 
+     99    1173 
+```
+
+Running with a different expected doublet rate, lets see if it also mirrors this behaviour:
+
+```         
+Doublet Singlet 
+      1    1271 
+```
+
+I am skeptical of the second estimate (which is also the expected number of doublets at this multiplet level). So I will stick to the first rate, and will have to adjust this for Slota paper.
+
+Now going to rewrite the loop so that each sample is dealt with. Also adding the loops to identify the ideal PCs, but wondering if this should be set to one number for all samples so that they are comparable? Or is it fine given that this is for the identification of doublets? PCs describe th variation of a dataset, PCs for sample 1 might be different for sample 2 because they are different data, therefore, using different PCs is required for Doubletfinder, but is unrelated to later analyses of the dataset as a whole where PCs will be identified for that set of data.
+
+```{r}
+Testing_dubF <- Ximerakis.list[[1]]
+Testing_dubF <- NormalizeData(Testing_dubF)
+Testing_dubF <- SCTransform(object = Testing_dubF)
+Testing_dubF<-RunPCA(Testing_dubF)
+Testing_dubF<-RunUMAP(Testing_dubF, dims=1:20)
+Testing_dubF<-FindNeighbors(Testing_dubF, dims=1:20)
+Testing_dubF<-FindClusters(Testing_dubF)
+sweep.list <- paramSweep_v3(Testing_dubF, PCs = 1:20, sct = TRUE)
+sweep.stats <- summarizeSweep(sweep.list)
+bcmvn <- find.pK(sweep.stats)
+bcmvn.max <- bcmvn[which.max(bcmvn$BCmetric),]
+optimal.pk <- as.numeric(bcmvn.max$pK)    #####Had to convert this value
+annotations <- Testing_dubF@meta.data$seurat_clusters
+homotypic.prop <- modelHomotypic(annotations)
+nExp.poi <- round(0.087 * nrow(Testing_dubF@meta.data)) #determined from number of cells loaded according to authors, see Log17.
+nExp.poi.adj <- round(nExp.poi * (1 - homotypic.prop))
+Testing_dubF<- doubletFinder_v3(seu=Testing_dubF, PCs= 1:20, pK=optimal.pk, nExp = nExp.poi.adj, sct = TRUE, pN=0.25)
+```
+
+I ran the loop for all samples, but now all of the cells are Singlets again. I'll check the loop. It seems like the end of the loop was returning only singlets, so i commented that and the column renaming out, adding in \`return(sample)'! This worked, so now adding small loops to rename the columns and one to subset the data by singlet only.
+
+According to single cell course, my course of action should be:
+
+Add mitochondrial, add ribosomal, add doublet notation, QC column about these three (status/pass), normalise to account for sequencing depth, findvariablefeatures, pca, findneighbours, findclusters, runumap, control for clustering resolution and other possible artifacts, we will take a close look at two minor cell populations: 1) dendritic cells (DCs), 2) platelets, aka thrombocytes, remove cells which didn't pass qc by subsetting, violinplot mito by celltype, same for ribo, sctransform, PCA, UMAP, and clustering. Switch to non normalised data and do DE.
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+## Next:
+
+Run doublet finder on Slota paper
+
+Adjusted expected doublet rate for Slota Paper according to cells loaded or retrieved: "[Single cell sequencing libraries were prepared from 10,000 cells using the Chromium Next GEM Single Cell 3ʹ Reagent Kits v3.1 (Dual Index) (10× Genomics) according to manufacturer's instructions.](https://actaneurocomms.biomedcentral.com/articles/10.1186/s40478-022-01450-4#Sec2)"
+
+Load our data, is it already differentially expressed genes? what is a DGE matrix?
+
+Ximerakis more filtering, UMAP plotting, labelling clusters?
+
+"violinplot mito by celltype, same for ribo, sctransform, PCA, UMAP, and clustering. Switch to non normalised data and do DE."

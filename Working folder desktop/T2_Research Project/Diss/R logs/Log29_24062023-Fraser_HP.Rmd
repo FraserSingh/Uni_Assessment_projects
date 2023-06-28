@@ -1,0 +1,37 @@
+# 24/06/2023
+
+## Plan today
+
+------------------------------------------------------------------------
+
+Need clustering info for verity to use Soup properly, run loading and clustering, then export that info?
+
+Just need to make Seurat objects with ReadParseBio? one raw and one filtered, expects "DGE.mtx", "cell_metadata.csv", "all_genes.csv".
+
+Ximerakis counts is being run atm with job ID 31060102, run multiqc and inspect the cellrangerMultiQC_Redux_1.html equivalent for summary stats and potential new cellranger output for that dataset.
+
+## Getting clusters
+
+Pre-treating and clustering the raw data. As shown [here](https://satijalab.org/seurat/articles/sctransform_vignette.html). This is taking over 650 GB of RAM, so adding glmGamPoi and verbose true for next run! Need to test a sub-set job and determine who much to use for an Eddie script.see [here](https://www.wiki.ed.ac.uk/display/ResearchServices/Memory+Specification) and [here](https://www.wiki.ed.ac.uk/display/ResearchServices/Parallel+Environments). r could split by sample and run that.
+
+```{r}
+Verity_total <- SCTransform(Verity_total, method = "glmGamPoi", verbose = TURE)
+
+# These are now standard steps in the Seurat workflow for visualization and clustering
+pbmc <- RunPCA(pbmc, verbose = FALSE)
+pbmc <- RunUMAP(pbmc, dims = 1:30, verbose = FALSE)
+
+pbmc <- FindNeighbors(pbmc, dims = 1:30, verbose = FALSE)
+pbmc <- FindClusters(pbmc, verbose = FALSE)
+DimPlot(pbmc, label = TRUE) + NoLegend()
+
+
+```
+
+## OX6X cellranger counts
+
+job 31106408
+
+------------------------------------------------------------------------
+
+## SUMMARY

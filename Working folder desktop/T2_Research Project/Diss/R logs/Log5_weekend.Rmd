@@ -1,0 +1,35 @@
+# 14/05/2023
+
+## Plan today
+
+Run fastq-dump again to split reads into separte files, try and identify where umi and barcode info could be to use STARsolo.
+
+See log 4 for more info
+
+------------------------------------------------------------------------
+
+Currently not providing STAR with data as reads 1 and 2, do I need to do something to the fastqs? Decided to re run fastq-dump on eddie with a split-3 option to create paired files, then going to run a modified scirpt more similar to Nick's file input. If the split files do not provide umi and bacord info, then I can't run STARsolo properly.
+
+running fasterq-dump \--split-3 ./SRR\* -O ./Split_files_test/ in msc8 screen
+
+This may make the Dumped folder in msc8 redundant, aside fromt he scripts kept therein, so DO NOT MOVE IT OR THE DUMPED FOLDER ON EDDIE SCRATCH SPACE
+
+So the fast files are not splitting into reads because there are so many reads in short read SRA. I will just try cellranger workflow from the start (assembly, mapping etc)
+
+Still elaving the screen running on msc8 in case, check Split_files_test
+
+To save scripts to git from scratch space:
+
+```{bash}
+#in top level of scratch space
+git add *.sh
+git commit -m "<message>"
+git push -u Scratch_space_scripts master
+Fraser.Singh
+personal token
+
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY

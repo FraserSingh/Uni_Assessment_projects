@@ -1,0 +1,172 @@
+# 21/06/2023
+
+## Plan today
+
+Verity QC
+
+Running cellranger again convert Slota to SCE as test
+
+Run emptydroplets
+
+SoupX slota
+
+expand to Verity
+
+Integrate
+
+------------------------------------------------------------------------
+
+## Notes
+
+Slota has two oddly distributed samples in PBS73CX and RML\<x\>. The nUMI and nGene is odd for the whole sample, and might have low sample counts overall. Might indicate cell death, so keep an eye out for these samples' influence on the analysis output.
+
+When integrating, put smaller datasets in the foreground to show it. Highlight the agein dataset to show its limits.
+
+Use david for GSE
+
+Cellenics [demultiplex](https://www.biomage.net/blog/how-to-demultiplex-a-seurat-object-and-convert-it-to-10x-files) Verity data to convert it to 10X as potential backup to fitting it into the SoupX workflow. There is a blog post to support that first page.
+
+## Re-running cellranger
+
+install cellranger, run with cellranger references, then deleting raw data and redux as uneeded. keep bam?
+
+```{bash}
+ls *Redux* ; 
+ls *redux* ;
+rm -rf <redux files>
+
+#remove folders of data
+rm -rf OX*X ; rm -rf YX*R* 
+```
+
+## Emptydrops
+
+Considered CellBender as an alternative to SoupX, but it requires interpretation of some cellranger output in the specified params. [This workflow](https://cellbender.readthedocs.io/en/latest/usage/index.html) would also not be applicable to Verity dataset after Slota.
+
+Giong to look into emptydrop generation instead.
+
+Need SCE objects, so need to convert Seurat to it. [This package](https://keshav-motwani.github.io/scanalysis/articles/conversion.html) seems to do it whilst retaining info. But it is old and relies on an older version of R, I refused to update any of the packages when installing it with :
+
+```{r}
+install.packages("devtools")
+devtools::install_github("keshavmot2/scanalysis")
+```
+
+So I will do this simply as a separate workflow rather than integrate at the moment. There is probably a versioning tool that can be use as part of the original workflow, but I don't think it's worth the time required.
+
+It's not compatible, going to abandon that package annoyingly!
+
+RunEmptyDrops, different tot emptydrops, but this installation is not working either.
+
+```{r}
+BiocManager::install("singleCellTK")
+```
+
+<https://rdrr.io/github/MarioniLab/DropletUtils/man/emptyDrops.html> has a good manual, reading it now.
+
+"Technically speaking, `emptyDrops` is designed to identify barcodes that correspond to non-empty droplets. This is close to but not quite the same as identifying cells, as droplets containing cell fragments, stripped nuclei and damaged cells will still be significantly non-empty. As such, it may often be necessary to perform additional quality control on the significant barcodes; we suggest doing so using methods from the scater package."
+
+<https://rdrr.io/github/MarioniLab/DropletUtils/man/defaultDrops.html> uses cellranger v 2 cell calling
+
+```{r}
+emptyDrops(Slota_raw_obj@assays$RNA@counts, lower=5)
+#This seems to work but obviously not on the filtered Slota
+```
+
+Might go home early as I am not feeling very well.
+
+Having rested, now checking what i can do
+
+There is a raw_mtxs.zip which might be the raw files, meaning the ones in the top level of /home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other are the filtered and the raw has empty droplets! this might allow me to run SoupX, but doesn't help with setting up emptydroplets. This ended up being true, i plotted the genes and they were minimal at the origin.
+
+![](images/Slota1newmatrix.png)
+
+going to load /home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/PBS25HP_matrix.mtx.gz then try emptydroplets on that.
+
+```{r}
+expression_matrix <- ReadMtx(
+  mtx = "/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/PBS25HP_matrix.mtx.gz"
+  , features = "/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/PBS25HP_features.tsv.gz",
+  cells = "/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/PBS25HP_matrix.mtx.gz"
+)
+Slota1 <- CreateSeuratObject(counts = expression_matrix)
+
+Slota1<-Read10X("/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/PBS25HP")
+Slota1_obj<-CreateSeuratObject(counts=Slota1, project="Slota")
+
+#Create metadata variable to edit it without affecting core data
+metadata_test<-Slota1_obj@meta.data
+
+#Saving cell barcodes as metainfo
+metadata_test$cells<-rownames(metadata_test)
+
+metadata_test <- metadata_test %>%
+    dplyr::rename(nUMI = nCount_RNA,
+                  nGene = nFeature_RNA)
+
+
+metadata_test %>%
+        ggplot(aes(color=sample, x=nGene, fill= sample)) +
+        geom_density(alpha = 0.2) +
+        theme_classic() +
+        scale_x_log10() +
+        geom_vline(xintercept = 300)+
+    ggplot2::ggtitle("Distribution of genes per cell", subtitle="Slota 1, filtered to minimum 20 genes")
+
+```
+
+Opening Slota Workflow seems to crash Rstudio now, might be because outputs are being loaded with it too liek graphs, will need to find a way to stop this from happening.
+
+Chat GPT gave me these filenames:
+
+> PBS25HP
+>
+> PBS61CX
+>
+> RML132HP
+>
+> RML134HP
+>
+> RML142CX
+>
+> PBS73CX
+>
+> RML138CX
+>
+> RML142HP
+>
+> PBS48CX
+>
+> PBS48HP
+>
+> PBS60CX
+>
+> RML133CX
+>
+> RML138HP
+>
+> RML145CX
+>
+> RML122CX
+>
+> RML133HP
+>
+> RML138HP
+>
+> RML145HP
+>
+> RML140CX
+>
+> RML122HP
+>
+> RML134CX
+>
+> RML140HP
+>
+> RML132CX
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Re ran cellranger counts then mutliqc to get summary stats by using the reference genome found [here](https://support.10xgenomics.com/single-cell-gene-expression/software/downloads/latest#:~:text=Mouse%20reference%20dataset%20required%20for%20Cell%20Ranger.), i expect it will be outdated and less accurate. Summary stats will be compared to the previous metrics.

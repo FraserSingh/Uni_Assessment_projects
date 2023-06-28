@@ -1,0 +1,82 @@
+# 19/06/2023
+
+## Plan today
+
+Settle on Slota loading method
+
+Run QC metrics for Slota
+
+Load Verity for QC then doublet finder.
+
+Get UMAPS script running
+
+Catch up presentation
+
+------------------------------------------------------------------------
+
+## Slota loading
+
+Loaded fine, but the mitochondiral annotation for genes is Mt not mt in Slota...isn't this the human annotation?
+
+Mitochondrial counts for Slota are distinctly lower than Ximerakis, with all counts lying below 25% mitochondrial. This indicates a better quality dataset at the outset.
+
+I believed that the raw and filtered matrices from Slota are labelled the wrong way round due to their file size, but this was not the case after checking with soe plotting.
+
+![](images/SlotaSizes.png)
+
+None of the filters required for Ximnerakis were needed in Slota, not even minimum representation fo genes between cells (set to 3 in Ximerakis). In my opinion, the data has been pre-filtered, so there isn't much I can do about it.
+
+Slota samples with Doubletfinder metadata is saved as Slota_list.RData, 11GB, if filtering by singlets it becomes 10.x GB
+
+## Load Verity
+
+Might have to run doublet finder on a sample at a time to avoid crashing on Rstudio
+
+## UMAP and clustering
+
+Run [singleR](http://bioconductor.org/books/release/SingleRBook/) after reading documentation (read up to [here](http://bioconductor.org/books/release/SingleRBook/classic-mode.html#:~:text=of%20the%20analysis.-,2.4%20Choices%20of%20assay%20data,-For%20the%20reference))
+
+[This guy](https://www.youtube.com/watch?v=p49seH2_i8Y&ab_channel=LiquidBrainBioinformatics) splits objects to do normalisation before integration that can then lead to annotation? DE
+
+Wheni tocmes to it, might need to tailor certain params as specified [here](https://www.singlecellcourse.org/single-cell-rna-seq-analysis-using-seurat.html#normalization-and-dimensionality-reduction:~:text=The%20following%20function,threshold%20%3D%200.5)).
+
+[tips for integrating large datasets](https://satijalab.org/seurat/articles/integration_large_datasets.html)
+
+```{r}
+#adapted from https://satijalab.org/seurat/articles/sctransform_vignette.html
+
+# BiocManager::install("glmGamPoi")
+# pbmc <- SCTransform(Xim_singlets_merged, method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = FALSE)
+# 
+# # These are now standard steps in the Seurat workflow for visualization and clustering
+# pbmc <- RunPCA(pbmc, verbose = FALSE)
+# pbmc <- RunUMAP(pbmc, dims = 1:30, verbose = FALSE)
+# 
+# pbmc <- FindNeighbors(pbmc, dims = 1:30, verbose = FALSE)
+# pbmc <- FindClusters(pbmc, verbose = FALSE)
+# DimPlot(pbmc, label = TRUE) + NoLegend()
+```
+
+```{r}
+#from https://satijalab.org/seurat/articles/integration_large_datasets.html
+
+anchors <- FindIntegrationAnchors(object.list = bm280k.list, reference = c(1, 2), reduction = "rpca",
+    dims = 1:50)
+bm280k.integrated <- IntegrateData(anchorset = anchors, dims = 1:50)
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Have read up to [https://satijalab.org/seurat/articles/pbmc3k_tutorial.html#finding-differentially-expressed-features-cluster-biomarkers:\~:text=Seurat%20%2D%20Guided%20Clustering,features%20(cluster%20biomarkers)](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html#finding-differentially-expressed-features-cluster-biomarkers:~:text=Seurat%20%2D%20Guided%20Clustering,features%20(cluster%20biomarkers)) in basic clustering, but have code above to try first with SCTransform
+
+Ran doublet finder on Slota paper
+
+Load Ximerakis/ sltoa to run UMAPs and annotation with SingleR
+
+Load Verity and try to get to doublet removed stage.
+
+Presentation.
+
+Load Xim_singlets_merged to try and run [this](https://satijalab.org/seurat/articles/pbmc3k_tutorial.html#cluster-the-cells), but most likely will have to integrate based on the workflow [here](https://satijalab.org/seurat/articles/integration_large_datasets.html), which would use Ximerakis.list.singlets . Both require an upstream treatment.

@@ -1,0 +1,36 @@
+# 31/05/2023
+
+## Plan today
+
+Still WFH as I am ill.
+
+------------------------------------------------------------------------
+
+Had a call with Al Ivens about the best way to run fastqc, and instead arrived at the conclusion that cellranger counts would be th ebest course of action as it knows how to interpret the barcodes, indexes etc. So I'm going to assess the websummaries and compile all the info into an excel sheet (starting with the cellranger multiqc).
+
+Also going to move the fastqc content somewhere else.
+
+Want to get all callranger data inot a single excel, waiting for rsync to get allt he data into msc8, then will concatenate the csvs together and label each sample's info.
+
+```{bash}
+echo "Sample,Estimated Number of Cells,Mean Reads per Cell,Median Genes per Cell,Number of Reads,Valid Barcodes,Sequencing Saturation,Q30 Bases in Barcode,Q30 Bases in RNA Read,Q30 Bases in UMI,Reads Mapped to Genome,Reads Mapped Confidently to Genome,Reads Mapped Confidently to Intergenic Regions,Reads Mapped Confidently to Intronic Regions,Reads Mapped Confidently to Exonic Regions,Reads Mapped Confidently to Transcriptome,Reads Mapped Antisense to Gene,Fraction Reads in Cells,Total Genes Detected,Median UMI Counts per Cell" >> combined_csv.csv
+
+for folder in cr*/outs; do     top_folder=$(basename "$(dirname "$folder")"); cat "$folder/metrics_summary.csv" | awk -v folder="$top_folder" -F ',' '{
+        if ($0 !~ /^Estimated Number of Cells/ || first_instance) {
+            print folder "," $0
+            first_instance=false
+        }
+    }' >> combined_csv.csv; done
+```
+
+Merging the Seurat objects for each Ximerakis sample in workflow2.Rmd on msc8. Getting info from [sce_cbind](https://sydneybiox.github.io/scMerge/reference/sce_cbind.html), [bioconductor guide](http://bioconductor.org/books/3.17/OSCA.multisample/), [seurat combining tqo 10x runs](https://satijalab.org/seurat/articles/merge_vignette.html) but none are giving me the answers i want. also [merge seruat](https://www.rdocumentation.org/packages/Seurat/versions/2.2.0/topics/MergeSeurat)
+
+waiting to load seurat and try mergeseurat, figured out i've ben using singlecellexperiement but also seurat, when they are separate things.
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Cellranger summary ready for analysis as cellrangermetrics.csv in onedrive
+
+Ready to make CreateSeuratObjects at [seurat combining tqo 10x runs](https://satijalab.org/seurat/articles/merge_vignette.html) , then merge.

@@ -1,0 +1,163 @@
+# 09/05/2023
+
+## Overall plan for first week
+
+PICARD→QC→alignments
+
+cell ranger for the external 10x data
+
+QC+ alignment for 1 external dataset, probably terminal prion paper ([Dysregulation of neuroprotective astrocytes, a spectrum of microglial activation states, and altered hippocampal neurogenesis are revealed by single-cell RNA sequencing in prion disease](https://www.notion.so/Dysregulation-of-neuroprotective-astrocytes-a-spectrum-of-microglial-activation-states-and-altered-94f97d71fc834ffaae4f67bd6f03d0fd))
+
+Setting up scratch space variable and adding new folder
+
+```{bash}
+echo ${scratch_loc:="/exports/eddie/scratch/$USER"}; echo ${group_loc:="/exports/cmvm/eddie/eb/groups/mabbott_grp"} #make alias for group folder
+cd $scratch_loc
+mkdir Project_23
+```
+
+Going to store data in Datastore, then check out data to scratch space to analyse and use it.
+
+```{bash}
+# If copying from outside eddie 
+# scp <myfile> $USER@eddie.ecdf.ed.ac.uk:/home/$USER
+#if copying from data store to Eddie
+#entre staging node
+qlogin -q staging
+cp <filename> <location in stratchspace> #see https://www.wiki.ed.ac.uk/display/ResearchServices/Data+Staging
+```
+
+Going to make symbolic links to the data in the Datastore? Might need to get the data onto Eddie first to use it.
+
+```{bash}
+#Useful Eddie code
+#template for eddie queuing script params
+#!/bin/sh
+#$ -cwd #run in current working dir
+#$ -N Hello #name of job
+#$ -l h_rt=00:01:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=1G #How much RAM is required
+
+echo 'hello world' #script content
+
+#$ -o hello.o #where outputs go
+#$ -e hello.e #where errors go
+
+chmod 755 hello.sh #make the script executable
+qsub hello.sh #submit job
+qstat #status of my job
+qacct # get info on the script's execution, check here for memory usage (maxvemem), fail status
+
+#send an email when the job begins and ends, and aborts or suspends
+#$ -M yourUUN@ed.ac.uk 
+#$ -m beas
+```
+
+```{bash}
+#Using conda example, this includes manual adjustment of a module due to errors. Taken from NGG ICA1
+#install conda env
+/localdisk/home/ubuntu-software/Anaconda3/bin/conda-env create -n NGG3 --file /localdisk/data/NGG/conda_envs/NGG3.yml
+#activate conda env 
+source /localdisk/home/ubuntu-software/Anaconda3/bin/activate NGG3
+#Adjust seaborn to enable proper plotting in NanoPlot (errors arose otherwise during NanoPlot)
+conda install seaborn=0.10.1
+```
+
+```{bash}
+#retrieved ensembl entries for mouse primary assembly (refernce genome) and the associated annotations
+#done in sratch space Project_23/Ensembl_.....
+#wget https://ftp.ensembl.org/pub/release-108/gtf/mus_musculus/Mus_musculus.GRCm39.108.gtf.gz; #annotations
+#wget https://ftp.ensembl.org/pub/release-108/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
+
+#Repeated later with newer genome, better than 108
+wget https://ftp.ensembl.org/pub/release-109/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz &&
+wget https://ftp.ensembl.org/pub/release-109/gtf/mus_musculus/Mus_musculus.GRCm39.109.gtf.gz
+```
+
+```{bash}
+#history used to set up conda
+#used qlogin -l h_vmem=4G from eddie greeting screen
+#later  tried to switch to a different node and switch to scratch space
+  263  mkdir -p /exports/csce/eddie/biology/groups/bioinfmsc/anaconda/envs/$USER
+  264  ls
+  265  ls -p /exports/csce/eddie/biology/groups/bioinfmsc/anaconda/envs/$USER
+  266  module load anaconda/5.3.1
+  267  cd /exports/eddie/scratch/$USER
+  268  pwd
+  269  ls
+  270  mkdir Project_test_conda
+  271  cd Project_test_conda/
+  272  module load anaconda/5.3.1
+  273  conda config --add envs_dirs /exports/csce/eddie/biology/groups/bioinfmsc/anaconda/envs/$USER
+  274  cat $HOME/.condarc
+  275  conda config --add pkgs_dirs /exports/csce/eddie/biology/groups/bioinfmsc/anaconda/pkgs
+  276  cat $HOME/.condarc
+```
+
+```{bash}
+module load roslin/star #loaded star to see the help page
+```
+
+```{bash}
+#tried to run script with directory variables and nice formatting:
+
+#!/usr/bin/sh
+#$ -cwd #run in current working dir
+#$ -N Star_a1_2268606 #name of job
+#$ -l h_rt=05:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=16G #How much RAM is required
+#$ -e star_a1.e #where errors go
+
+#retrieve the files for generating genome indexes
+#wget https://ftp.ensembl.org/pub/release-109/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
+#wget https://ftp.ensembl.org/pub/release-109/gtf/mus_musculus/Mus_musculus.GRCm39.109.gtf.gz
+
+
+#outputgenomedir:="$PWD/STAR_genome_mus_109" #edit this directory name to relfect the current investigation 
+mkdir STAR_genome_mus_109 #$outputgenomedir
+
+module load roslin/star/2.7.10b
+
+STAR \
+--runThreadN 2 \
+--runMode genomeGenerate  \
+--genomeDir ./STAR_genome_mus_109 \
+--genomeFastaFiles *primary_assembly.fa.gz\
+--sjdbGTFfile *gtf.gz\
+--sjdbOverhang -149\
+
+
+#..........but ended up using less fnacy features:
+
+#!/usr/bin/sh
+#$ -cwd #run in current working dir
+#$ -N Star_a1_2268606 #name of job
+#$ -l h_rt=05:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=16G #How much RAM is required
+#$ -e star_a1.e #where errors go
+
+#retrieve the files for generating genome indexes
+#wget https://ftp.ensembl.org/pub/release-109/fasta/mus_musculus/dna/Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
+#wget https://ftp.ensembl.org/pub/release-109/gtf/mus_musculus/Mus_musculus.GRCm39.109.gtf.gz
+
+mkdir STAR_genome_mus_109
+
+module load roslin/star/2.7.10b
+
+STAR --runThreadN 2 --runMode genomeGenerate --genomeDir ./STAR_genome_mus_109 --genomeFastaFiles *primary_assembly.fa.gz --sjdbGTFfile *gtf.gz --sjdbOverhang -149
+```
+
+I unzipped the assembly files but still got errors:
+
+```{bash}
+mkdir: cannot create directory ‘STAR_genome_mus_109’: File exists
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc
+/var/spool/gridscheduler/execd/node2b08/job_scripts/30288755: line 16: 22733 Aborted                 (core dumped) STAR --runThreadN 2 --runMode genomeGenerate --genomeDir ./STAR_genome_mus_109 --genomeFastaFiles *primary_assembly.fa --sjdbGTFfile *gtf --sjdbOverhang -149
+```
+
+This seems to mean that there is not enough memory allocated
+
+Sam: harmony, liger both work with seurat. responsive to questions too
+
+venn diagram, violin plot are good for comparison

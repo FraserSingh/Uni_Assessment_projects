@@ -1,0 +1,69 @@
+# 29/05/2023
+
+## Plan today
+
+-   Assess cellranger counts
+
+    -   map names?
+
+-   Filter cells as mentioned by Nick previously
+
+-   Loading Ximerakis and Verity data into R as objects too.
+
+    -   merging them into one object
+
+    -   single cell Seurat object
+
+-   Doubletfinder for each filtered dataset
+
+------------------------------------------------------------------------
+
+## Multiqc work
+
+Fastqc has been run for everything in all bam converted folders, should i specify samples each time? Should I rename samples to OX and YX numbers first? I have tried to run a fastqc at sample folder level, hopefully this does something different and labels the fastqc reports differently (job 30561616). The output fastqc was the same....
+
+Needed to re run cr counts because OX2X wasn't being processed (web_summary hadn't been renamed, job was 30559626, successful.
+
+Figured out that there are error handling inabiltieis for mutliqc for cellranger at the moment, should be fixed in next public release. I followed instruction from ChatGPT and the [Github for this error](https://github.com/ewels/MultiQC/commit/9d5e3ab55813678aa5378f6b8565059c6e7ba869#) with the follwiing code, which altered the version of mutliqc on my conda env
+
+```{bash}
+git init #initialise git in scratch space root dir
+git clone https://github.com/ewels/MultiQC.git
+cd MultiQC/
+git checkout 9d5e3ab #pre release code for mutliqc to handle errors
+pip install .
+```
+
+Now that the conda env is updated, I'll re-run the mutliqc script. Job 30557618 worked! There are many fails in one section, not sure what it represents though. For presentation, could map names.
+
+## R Seurat work
+
+The script and Rdata files are on the msc8 server, tunnelled into through Mobaxterm.
+
+Need to get matrices for Ximerakis from folders:
+
+```{bash}
+#copy the matrix files to msc8 from msc8
+
+for sample in $(cat Ximerakis_BAM_names.txt) ; do
+  samplename=$sample
+  scp -r $USER@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/s2268606/Project_23/External_datasets/Ximerakis/cr${samplename}/outs/raw_feature_bc_matrix/ ./${samplename}raw_feature_bc_matrix
+
+done
+```
+
+Then manually downloaded each folder. Going to load into Seurat as separate sce objects then merge as mentioned by Nick the other day.
+
+and put into R, Seurat object.
+
+Working on Slota paper instead for now, up to [here](Now,%20let’s%20map%20ENSEMBL%20IDs%20to%20gene%20symbols.%20From%20the%20table%20command,%20we%20can%20see%20that%20most%20genes%20were%20annotated;%20however,%20846%20returned%20“NA.”%20By%20default,%20mapIds%20returs%20one%20symbol%20per%20ID;%20this%20behaviour%20can%20be%20changed%20using%20multiVals%20argument.) (not doing molecule annotation)
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+got Slota analysis started, having trouble with annotation, moving onto Qc section of guide tomorrow
+
+Fastqc re-run, still not satisfied with the groupings of the runs.
+
+Got multiqc working for cellranger counts (can add to powerpoint)

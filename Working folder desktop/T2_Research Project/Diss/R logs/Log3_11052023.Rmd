@@ -1,0 +1,100 @@
+# 11/05/2023
+
+## Plan Today
+
+Started later today as had to drop PC tower at shop near flat
+
+Similar to yesterday, trying to get assembly done and quality assessments started on external data.
+
+------------------------------------------------------------------------
+
+## 1. Downloading external data
+
+msc8 hardcode download worked last night for the Ximerakis data, currenlty held in msc8. the command:
+
+```{bash}
+prefetch GSE129788
+```
+
+was used. If future scripting is desired instead of wget hardoding, the script hardcoreDownload.sh is on my scratch space and should be completed or expanded on to stop errors.
+
+Downloading the Slota papers using web interface (from <https://singlecell.broadinstitute.org/single_cell/study/SCP1962/dysregulation-of-neuroprotective-astrocytes-a-spectrum-of-microglial-activation-states-and-altered-hippocampal-neurogenesis-are-revealed-by-single-cell-rna-sequencing-in-prion-disease#/>) to computer then transferring to msc8. Then going to transfer to my Datastore space in the group and run:
+
+```{bash}
+#transfer to Datastore using scp?
+scp -r External_datasets $USER@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/s2268606/Project_23/External_datasets
+
+#had to repeat for SRR8895029, SRR8895031, SRR8895033, SRR8895038 due to connection loss
+screen scp -r SRR8895038 $USER@eddie.ecdf.ed.ac.uk:/exports/eddie/scratch/s2268606/Project_23/External_datasets/External_datasets/Ximerakis
+```
+
+To make fastq.gz files of the SRA runs, I used Eddie job script found at /exports/eddie/scratch/s2268606/Project_23/External_datasets/External_datasets/Ximerakis/fasterq-dump.sh. Eddie job 30346392
+
+```{bash}
+#!/usr/bin/sh
+#$ -cwd #run in current working dir
+#$ -N fastq_dumping #name of job
+#$ -l h_rt=24:00:00 #approximate time taken, (specify more than required for safety)
+#$ -l h_vmem=32G #How much RAM is required
+#$ -e fastq_dump.e #where errors go
+#S -o fastq_dump.o #where the output goes
+
+#grant Eddie access to my conda env
+source /etc/profile.d/modules.sh
+module load anaconda/5.3.1
+source activate project_test
+
+screen fasterq-dump ./SRR* -O ./Dumped
+```
+
+Had to cancel the command as didn't put it in screen, but this command continued the conversion. In future repeats, use the command at the end of the last code block with screen!
+
+```{bash}
+screen fasterq-dump ./SRR8895025 ./SRR8895026 ./SRR8895027 ./SRR8895028 ./SRR8895029 ./SRR8895030 ./SRR8895031 ./SRR8895032 ./SRR8895033 ./SRR8895034 ./SRR8895035 ./SRR8895036 ./SRR8895037 ./SRR8895038 -O ./Dumped
+```
+
+## 2.Picard
+
+Added picard to the conda environment
+
+```{bash}
+source activate project_test
+conda install --channel bioconda picard
+conda config --add channels bioconda
+```
+
+Am I using this for the Ximerakis dataset? these files will probably make Illumina, which I then need to 'filter droplets and loose barcodes?' I think I make sparse matrix equivalent.
+
+```{bash}
+java -Xmx2g -jar picard.jar PicardToolName \
+	OPTION1=value1 \
+	OPTION2=value2
+```
+
+## 3.Deciding what data to use
+
+I need to re-read the papers and note which aspects of the data I want to use for my analysis.
+
+Ximerakis will have just the raw data, whereas the Slota paper offers a combined matrix file of all the runs
+
+Will need to check how to descriminate between the runs in the Slota paper. Could search how to split matrix file of entire experiment into runs
+
+## Daily Advice from Sam:
+
+Seurat for Slota paper
+
+Use the matrix file
+
+seurate vignettes are handy, or watch Bioinformagician
+
+Ximerakis paper will need to make sparse matrix file, fastq first then something else? ask chat gpt?
+
+------------------------------------------------------------------------
+
+## Summary
+
+Managed to get all data downloaded, STAR alignment still running. Running fasterq-dump on msc8 in detached screen PID 3866671.
+
+I looked at Nick's command for genome assembly and I see It is similar but lower costs on time, so going to run it as our commands were very similar. /exports/cmvm/eddie/eb/groups/mabbott_grp/NVerity/snRNAseq/genomes/star_genome.sh. Modified Star_attempt4.sh to Star_attempt5.sh, with different resource parameters. hopefully this will be done by tomorrow monring .
+
+reattach screen on msc8, qstat on eddie.

@@ -1,0 +1,25 @@
+# 30/05/2023
+
+## Plan today
+
+Illness, working at home
+
+Get Fastqc running with correct names
+
+present current progress
+
+interpret cellranger counts data
+
+------------------------------------------------------------------------
+
+LEarning about cellranger counts data from [here](https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/summary).
+
+REnamed fastqs to heopfully set up better fastqc generation
+
+fastq generation on job 30570531, made too many fastqc reports. Speak to Nick
+
+Seurat work on Terminal dataset pick up from [here](https://www.singlecellcourse.org/scrna-seq-analysis-with-bioconductor.html#visual-data-exploration:~:text=For%20example%2C%20the%20same%20plot%20as%20above%20could%20have%20been%20done%20directly%20from%20our%20tung%20SCE%20object%3A)
+
+------------------------------------------------------------------------
+
+## SUMMARY

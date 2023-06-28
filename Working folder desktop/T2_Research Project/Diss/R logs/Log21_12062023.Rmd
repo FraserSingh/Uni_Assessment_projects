@@ -1,0 +1,31 @@
+# 21/06/2023
+
+## Pl
+
+## n today
+
+Final comparison of Ximerakis QC plots across all present filters to decide on a good candidate to proceed with.
+
+Update Slota script with changes from Ximerakis.
+
+Set up and run slota QC as this is similar to Ximerakis.
+
+Verity Qc will be different, but go off of Nick's guidelines.
+
+------------------------------------------------------------------------
+
+ximarkis paper recommended filters: nUMI\>200, nGene\>250, %Mito\<30. Whilst this does still leave over 50k cells before other filtering, I will restrict to 20% mito as I think the mito content should be lower than 20 % from brief literature searching. I may see from fufther reading that a high threshold is acceptable. Seen below.
+
+![](images/XimerakisnUMI200nGene250Mito20.png)
+
+![](images/Ximerakis_authorfilterMt20.png)
+
+![](images/XimerakisComplexityauthorfilter.png)
+
+continue from [here](https://github.com/hbctraining/scRNA-seq/blob/master/lessons/04_SC_quality_control.md#gene-level-filtering:~:text=Gene%2D-,level,-filtering)
+
+literature on [quality](https://github.com/hbctraining/scRNA-seq/blob/master/lessons/QC_bad_data.md)
+
+------------------------------------------------------------------------
+
+## SUMMARY

@@ -1,0 +1,54 @@
+# 22/05/2023
+
+## Plan today
+
+Check progress from weekend scripts
+
+resume tasks from last session:
+
+-   
+
+## Ximerakis Cr counts
+
+Identified that the scirpt did not run over the weekend because I had typos in the script ( whitespace !). I have resubmitted now with better syntax but will likely be int he queue for a while due to the resource parameters. job ID 30493021.
+
+Files were accepted, but read lengths were still an issue, going to run the newly generated fastq from the bam file. The job for bam to fastq took 20 mins, so could theoretically run it for all of the samples quite quickly.
+
+Bamtofastq generated something, but not sure what, because the folders are labelled like: s10_MissingLibrary_1\_HNGW3BGX2 . Going to try and run cellranger on this set of folders for the fastqs with script named CR_counts_day9.sh, job ID 30493283. Did not work, specified folder was not at the correct level. Rerunning with job ID 30493349. Editted the script to take more cores after warning was given in output file but left running. It is working though, so could write script for looping this. This job 30493349 completed successfully! time to automate
+
+-   get bam files from the rest of the study write script to loop bamtofastq for each file(job ID 30493321), amended and now 30494876 (script editted to avoid duplication, working script found one directory up)
+
+    -   Automated for each sample, job ID 30496687
+
+-   Automating cellranger count in CR_counts_day9.v3.sh, job ID 30496761, held until 30496687 finishes.
+
+cellranger_genome.sh-\>bamRetrieve.sh -\> bam_convert.sh -\> -\>CR_counts_day9.v3.sh (see word doc for current script flow)
+
+-   whilst this happens, look at DGE or inspect test cellranger on eddie.
+
+-   If doing this, make filename list and loop through bamtofastq like with other cellranger scripts.
+
+When I get the raw counts from cellranger, I'll use the instructions adapted from [here](https://www.singlecellcourse.org/scrna-seq-analysis-with-bioconductor.html#:~:text=Creating%20SingleCellExperiment%20objects,an%20example%20usage%3A)
+
+```{r}
+
+library(DropletUtils)
+
+# importing the raw count data
+sce <- read10xCounts("data/pbmc_1k_raw")
+```
+
+## DEGs
+
+Going to load in the matrix files from Slota terminal paper and our stuff today (or write a script for it).
+
+```{r}
+#Load Slota terminal paper
+
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+✅Submistted jobs for bam to fastq conversion and cellranger counts (held until first job is done)

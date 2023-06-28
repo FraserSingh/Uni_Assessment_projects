@@ -1,0 +1,42 @@
+# 28/05/2023
+
+## Plan today
+
+------------------------------------------------------------------------
+
+Work from Home
+
+renamed the websummaries from cr counts with the preffix of the sample abbreviation (eg. OX1Xweb_summary.html)
+
+Setting up new conda env called multiqc_update which has version 1.14 (retrieved from conda-forge channel) to parse the cellranger counts info, required this version to run this tool's output as shown [here](https://github.com/ewels/MultiQC/pull/1689/commits/82316b75219037759bc2f65a8bfa52170804871b).
+
+The new version at elast uses cellranger module but still falls over. Specifying the cr\* folders so multiqc searches the folders itself rather than specifying the web summaries
+
+```{r}
+│ Please copy this log and report it at https://github.com/ewels/MultiQC/issues                                                                         │
+│ Please attach a file that triggers the error. The last file found was: ./crOX1X/outs/web_summary.html                                                 │
+│                                                                                                                                                       │
+│ Traceback (most recent call last):                                                                                                                    │
+│   File "/exports/csce/eddie/biology/groups/bioinfmsc/anaconda/envs/s2268606/multiqc_update/lib/python3.11/site-packages/multiqc/multiqc.py", line 654 │
+│     output = mod()                                                                                                                                    │
+│              ^^^^^                                                                                                                                    │
+│   File "/exports/csce/eddie/biology/groups/bioinfmsc/anaconda/envs/s2268606/multiqc_update/lib/python3.11/site-packages/multiqc/modules/cellranger/ce │
+│     n["count"] = self.parse_count_html()                                                                                                              │
+│                  ^^^^^^^^^^^^^^^^^^^^^^^                                                                                                              │
+│   File "/exports/csce/eddie/biology/groups/bioinfmsc/anaconda/envs/s2268606/multiqc_update/lib/python3.11/site-packages/multiqc/modules/cellranger/co │
+│     self.parse_count_report(f)                                                                                                                        │
+│   File "/exports/csce/eddie/biology/groups/bioinfmsc/anaconda/envs/s2268606/multiqc_update/lib/python3.11/site-packages/multiqc/modules/cellranger/co │
+│     warnings[alarm["id"]] = "FAIL"                                                                                                                    │
+│              ~~~~~^^^^^^                                                                                                                              │
+│ KeyError: 'id'                                                                                                                                        │
+│                                                                                                                                                       │
+|           multiqc | No analysis results found. Cleaning up..
+|           multiqc | MultiQC complete
+
+```
+
+This error shows that it still didn't work, will have to manually assess each!
+
+------------------------------------------------------------------------
+
+## SUMMARY

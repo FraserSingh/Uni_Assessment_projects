@@ -1,0 +1,48 @@
+---
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# 26/06/2023
+
+# Plan today
+
+I have managed to get some of SoupX working, but the stage im at
+requires clustering info rom cellranger or seurat. I've been trying to
+loop SCtransform, RunPCA,RunUMAP,FindNeighbors,FindClusters data on a
+sampe by sample basis. Would result in clustering infor to feed into
+soupx. I don't know how the clustering would work out, so if clustering
+on a smaple by smaple bassis will it be useful for soupx as the clusters
+might be different for each sample. The outupus from the loop is not
+verobse enough after reconnecting, so abandoning SoupX filterig for now
+and creating a hard filter on the data so that I can use the dataVerity
+data in integration.
+
+1.  Document process that has worked up to now
+2.  Kill process
+3.  clear variable and script so that working stufdf is retained but not
+    integrated into workflow.
+4.  Filter Verity and use from there
+5.  itregration documentation and manual work rqeiqed for integration.
+    (might take time)
+    1.  integration means deciding which samples to consider.
+6.  Presenttion to outline what has been done but also what I am
+    curren;ty doing (might need eddie for transformation)
+7.  Add outputs and graphs to presentation
+8.  check nicks scripts for transforming etc.
+9.  Cellranger outputs for OX6X on Ximerakis dataset
+10. let processes run whilst working on presentation
+
+### 1. Document process update
+
+sample labelling order was altered to put sample 11 first, meaning
+sample 1 is not joined with sample 11.
+
+The loop works but is very slow, might need to speak to Al about it.
+
+## SUMMARY
+
+```{r}
+Ver_singlets_merged.RData #is the filtered to gene 1.1k and doublets
+```
