@@ -1,0 +1,100 @@
+# 04/07/23
+
+## Plan today
+
+------------------------------------------------------------------------
+
+DEGs, see [this video](https://youtu.be/1i6T9hpvwg0) for steps to compare across conditions
+
+```{r}
+markers_astrocytes<-FindConservedMarkers(Verity.combined,ident.1=2,grouping.var='treatment')
+
+head(markers_astrocytes)
+
+FeaturePlot(Verity.combined, features=c("", min.cutoff='q10'))
+
+
+#Check cluster number
+DimPlot(Verity.combined,reduction='umap', label=T)
+
+#rename cluster
+Verity.combined<-RenameIdents(Verity.combined, 'cluster_num'='~Astrocytes')
+DimPlot(Verity.combined,reduction='umap', label=T)
+```
+
+Findconservedmarkers is better for treated samples, findallmarkers is better for single level data.
+
+```{r}
+DefaultAssay(Ver_astrocytes)<-'RNA'
+
+Verity.combinedNBHME7$bc_wells<-NULL
+Verity.combinedNBHME7$species<-NULL
+Verity.combinedNBHME7$gene_count<-NULL
+Verity.combinedNBHME7$tscp_count<-NULL
+Verity.combinedNBHME7$mread_count<-NULL
+Verity.combinedNBHME7$bc1_well<-NULL
+Verity.combinedNBHME7$bc2_well<-NULL
+Verity.combinedNBHME7$bc3_well<-NULL
+Verity.combinedNBHME7$bc1_wind<-NULL
+Verity.combinedNBHME7$bc2_wind<-NULL
+Verity.combinedNBHME7$bc3_wind<-NULL
+```
+
+Cluster Verity with ageing data not included
+
+## Cluster annnotation
+
+See [hippocampome](https://hippocampome.org/php/markers.php) for list of gene markers of neurons
+
+Make table of celltypes and the typical markers
+
+Nick found [this paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10028805/) which is in pre-print and will likely have great lists of biomarkers for cluster id
+
+<https://www.biostars.org/p/409790/> to explain marker id commands
+
+Apply script to External datasets
+
+Get Harmony and DESeq2 running
+
+## Notes from supervisor meeting
+
+Get DEGs and GSEA analysis done first with prions. Worry about perfecting workflows later.
+
+-   Go with RPCA, current clustering.
+
+    -   Subset the astrocytes
+
+-   Get DEG for Verity astrocytes
+
+-   Integrate Verity with slota
+
+-   Cluster and get DEGs
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+-   Add upper limit for gene count and RNA count to eliminate erroenous cells after doubletfinder
+
+-   Add to the list of gene markers [here](https://uoe-my.sharepoint.com/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Diss/Outputs/MarkersTable.xlsx?web=1)
+
+-   Get Slota metadata, look for ways to add treatment metadata
+
+    -   use regex to label: , ,,
+
+        ```{r}
+        #From Chat GPT
+        treat_detect_Slota <- case_when(
+          str_detect(sampleLabs, "RML*HP") ~ "RML_HP",
+          str_detect(sampleLabs, "PBS*HP") ~ "PBS_HP",
+          str_detect(sampleLabs, "RML*CX") ~ "RML_CX",
+          str_detect(sampleLabs, "PBS*CX") ~ "PBS_CX",
+          TRUE ~ NA_character_
+        )
+
+        Slo_singlets_merged@meta.data$treatment<-treat_detect_Slota
+        Idents(object=Slo_singlets_merged)<-"treatment"
+        rm(treat_detect)
+        ```
+
+REMOVING EXTRA METADATA HELPED VERITY RUN

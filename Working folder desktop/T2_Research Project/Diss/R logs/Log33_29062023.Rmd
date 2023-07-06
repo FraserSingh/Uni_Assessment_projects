@@ -1,0 +1,174 @@
+# 29/06/2023
+
+## Plan today
+
+------------------------------------------------------------------------
+
+## Regarding annotation for clusters with singleR
+
+As stated [here](https://bioconductor.org/packages/devel/bioc/vignettes/SingleR/inst/doc/SingleR.html#5_FAQs), "celldex contains many built-in references that were previously in SingleR but have been migrated into a separate package for more general use by other Bioconductor packages. scRNAseq contains many single-cell datasets, many of which contain the authors' manual annotations. ArrayExpress and GEOquery can be used to download any of the bulk or single-cell datasets in ArrayExpress or GEO, respectively."
+
+## Slota two weird quality samples
+
+Plot the mito vs rb, plot the
+
+## Slota running workflow to get object for comparisons
+
+The original joint counts file is what I am going with.
+
+set knit to false for cells
+
+## Clustering
+
+Elbow plot then limit PCs
+
+choose samples of interest
+
+[3D plots?](https://github.com/Dragonmasterx87/Interactive-3D-Plotting-in-Seurat-3.0.0/blob/master/3D%20UMAP%20Plotting%20v1.3.R)
+
+Label with a gene GFAP and ALDH1
+
+## Harmony and comparisons
+
+Get clustering and reductions for other data too
+
+![](images/Slota_treatments.png){width="223"}
+
+Slota Hp samples: mouse25, mouse48, mouse122, mouse142, mouse133, mouse132, mouse138, mouse145, mouse140.
+
+Slota Cx samples: mouse48, mouse60, mouse61, mouse73, mouse122, mouse132, mouse133, mouse134, mouse138, mouse140, mouse142, mouse145.
+
+Verity samples
+
+| Sample name | ???     | Treatment |
+|-------------|---------|-----------|
+| sample 1    | 69 & 70 | NBH VEH   |
+| sample 2    | 72 & 73 | NBH VEH   |
+| sample 5    | 79 & 80 | ME7 VEH   |
+| sample 6    | 82 & 83 | ME7 VEH   |
+| sample 9    | 57 & 58 | AGING VEH |
+| sample 11   | 63 & 64 | AGING VEH |
+
+### Comparisons
+
+See [file](https://uoe-my.sharepoint.com/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Diss/Data%20comparisons%20table.xlsx?web=1) for information on the sample.
+
+![](images/Comparisons_table-02.png){width="475"}
+
+The hippocampus vs. cortex comparison will aim to see if the early stages of prions progression in the hippocampus are mirrored in the infected cortex too.
+
+Warning! Adjustment or consideration must be made regarding the sex differences in Verity data.
+
+## DEG within datasets
+
+I need DEG lists to from within each dataset so that I can compare them to the other datasets.
+
+## First draft of integration script
+
+```{r}
+#Load all of the relevant data. This will be soup-less, doublet-filtered Seruat objects from each paper
+
+load("Rdata/Ver_singlets_merged.RData")
+load("Rdata/Xim_singlets_merged.RData")
+load("Rdata/Slo_singlets_merged.RData")
+
+gc()
+#What would the size of this be in memory?
+
+#Set active assays to RNA
+DefaultAssay(Slo_singlets_merged) <- "RNA"
+DefaultAssay(Xim_singlets_merged) <- "RNA"
+DefaultAssay(Ver_singlets_merged) <- "RNA"
+
+# #split, then subset and merge the relevant data into the comparison datasets as detailed in the comparison table above
+# Xim_list<-SplitObject(Xim_singlets_merged, split.by = "sample")
+# Slo_list<-SplitObject(Slo_singlets_merged, split.by = "sample")
+# Ver_list<-SplitObject(Ver_singlets_merged, split.by = "sample")
+```
+
+```{r}
+#COMPARISON 1 Hippocampus DEG between datasets
+#list of samples to merge
+comp1a<-list(subset(Slo_singlets_merged,subset=sample==c("PBS25HP","PBS48HP","RML122HP","RML132HP","RML133HP","RML138HP","RML140HP","RML142HP","RML145HP"))) #FIXME check sample names
+comp1b<-list(subset(Ver_singlets_merged,subset=sample==c("sample1","sample2","sample5", "sample6")))
+
+comp1<-list(comp1a,comp1b)
+# Merge raw samples, adapted from here https://hbctraining.github.io/scRNA-seq_online/lessons/06a_integration_harmony.html
+comp1_merged <-Merge_Seurat_List(list_seurat=comp1) 
+
+rm(list(comp1))
+gc()
+
+# Perform log-normalization and feature selection, as well as SCT normalization on global object
+comp1_merged <- comp1_merged %>%
+    NormalizeData() %>%
+    FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>% 
+    ScaleData() %>%
+    SCTransform(vars.to.regress = c("mitoRatio")) #FIXME do we need this?
+
+# Calculate PCs using variable features determined by SCTransform (3000 by default)
+comp1_merged <- RunPCA(comp1_merged, assay = "SCT", npcs = 50)
+
+comp1_merged_harmonized <- RunHarmony(comp1_merged, 
+				group.by.vars = c("sample_id", "experiment_date"), #FIXME variable names to integrate on
+				reduction = "pca", assay.use = "SCT", reduction.save = "harmony")
+
+comp1_merged_harmonized <- RunUMAP(comp1_merged_harmonized, reduction = "harmony", assay = "SCT", dims = 1:40)
+
+```
+
+```{r}
+#COMPARISON 2
+#list of samples to merge
+comp2a<-list(subset(Slo_singlets_merged,subset=sample==c("RML122HP","RML142HP","RML133HP","RML132HP","RML138HP","RML145HP","RML140HP"))) #FIXME check sample names
+comp2b<-list(subset(Ver_singlets_merged,subset=sample==c("sample5", "sample6")))
+comp2c<-list(subset(Ver_singlets_merged,subset=sample==c("OX1X","OX2X","OX3X", "OX4X","OX5X","OX6X","OX7X","OX8X")))
+
+comp2<-list(comp2a,comp2b, comp2c)
+# Merge raw samples, adapted from here https://hbctraining.github.io/scRNA-seq_online/lessons/06a_integration_harmony.html
+comp2_merged <-Merge_Seurat_List(list_seurat=comp1) 
+
+rm(list(comp2))
+gc()
+
+# Perform log-normalization and feature selection, as well as SCT normalization on global object
+comp2_merged <- comp2_merged %>%
+    NormalizeData() %>%
+    FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>% 
+    ScaleData() %>%
+    SCTransform(vars.to.regress = c("mitoRatio")) #FIXME do we need this?
+
+# Calculate PCs using variable features determined by SCTransform (3000 by default)
+comp2_merged <- RunPCA(comp2_merged, assay = "SCT", npcs = 50)
+
+comp2_merged_harmonized <- RunHarmony(comp2_merged, 
+				group.by.vars = c("sample_id", "experiment_date"), #FIXME variable names to integrate on
+				reduction = "pca", assay.use = "SCT", reduction.save = "harmony")
+
+comp2_merged_harmonized <- RunUMAP(comp2_merged_harmonized, reduction = "harmony", assay = "SCT", dims = 1:40)
+
+```
+
+------------------------------------------------------------------------
+
+## Notes from Nick
+
+#### Regarding sex differences
+
+Identify gene names which are sex linked and remove them early on in the workflow? If they affect clustering (which they might not if tools are used to ignoring genes which are absent in one group and present in another) then I'll need to remove them before any reductions? If not, I'd need to remove them ahead of any Differential Expression list analysis.
+
+Literature: <https://www.nature.com/articles/s41593-023-01356-x> This paper has some information on the types of cells appearing in prefrontal cortex samples in AD. It also mentions some of the differences in astrocyte populations observed, could be useful for subpopulation identification later.
+
+## SUMMARY
+
+Need to find list of sex-linked genes, check annotation resources.
+
+regress mito?
+
+Make testfile with colour codes, comparison indexes....? consult colorbrewer if needed
+
+DEG lists will be generated from within each dataset then compared between datasets as part of analysis.
+
+Slota new singlets ready for their own clustering, need to sort out Ximerakis start to finish
+
+think about how many dims to use in clustering etc

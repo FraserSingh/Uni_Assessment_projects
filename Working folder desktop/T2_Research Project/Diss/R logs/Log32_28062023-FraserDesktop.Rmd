@@ -14,6 +14,7 @@ As seen [here](https://static-content.springer.com/esm/art%3A10.1186%2Fs13059-01
 
 need to set assay to RNA, then do all the clustering stuff?
 
+
 ## Harmony stuff
 
 Need to check prerequisites for Harmony, as may not be the normalisation stuff I've done before.

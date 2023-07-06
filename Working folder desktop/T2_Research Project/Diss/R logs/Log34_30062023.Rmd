@@ -1,0 +1,220 @@
+# 30/06/2023
+
+## Plan today
+
+Slota new singlets ready for their own clustering,
+
+Ximerakis start to finish ✅
+
+Verity Run integration pipeline below, see outputs and merge to other datasets
+
+-   Currently editing on local, need to save to Eddie and msc8
+
+think about how many dims to use in clustering etc
+
+Need to find list of sex-linked genes, check annotation resources.
+
+regress mito?
+
+Make testfile with colour codes, comparison indexes....?
+
+DEG lists will be generated from within each dataset then compared between datasets as part of analysis.
+
+------------------------------------------------------------------------
+
+## DEGs within groups
+
+#### Metadata for condition in Verity dataset
+
+```{r}
+sampleLabs<-names(Verity_total@active.ident)
+
+#FIXME change these to be treatment levels of experimental setup
+
+#Assigning names to the samples to keep identity
+#From Chat GPT
+treat_detect <- case_when(
+  str_detect(sampleLabs, "sample11") ~ "AGEING",
+  str_detect(sampleLabs, "sample1") ~ "NBH",
+  str_detect(sampleLabs, "sample2") ~ "NBH",
+  str_detect(sampleLabs, "sample5") ~ "ME7",
+  str_detect(sampleLabs, "sample6") ~ "ME7",
+  str_detect(sampleLabs, "sample9") ~ "AGEING",
+  TRUE ~ NA_character_
+)
+#
+Verity_total@meta.data$treatment<-treat_detect
+
+#FIXME may not be needed if the integration workflow specifies what to consider anyway
+Idents(object=Verity_total)<-"sample"
+rm(sampleLabs, treat_detect)
+```
+
+(MOVE VERITY FROM LOCAL TO MSC8 AND EDDIE TO BE SAVED
+
+[Seurat integration steps](https://satijalab.org/seurat/articles/integration_introduction.html) (adivsed by Sam)
+
+### Make metadata for treatment
+
+```{r}
+
+sampleLabs<-names(Ver_singlets_merged@active.ident)
+
+#FIXME change these to be treatment levels of experimental setup
+
+#Assigning names to the samples to keep identity
+#From Chat GPT
+treat_detect <- case_when(
+  str_detect(sampleLabs, "sample11") ~ "AGEING",
+  str_detect(sampleLabs, "sample1") ~ "NBH",
+  str_detect(sampleLabs, "sample2") ~ "NBH",
+  str_detect(sampleLabs, "sample5") ~ "ME7",
+  str_detect(sampleLabs, "sample6") ~ "ME7",
+  str_detect(sampleLabs, "sample9") ~ "AGEING",
+  TRUE ~ NA_character_
+)
+#
+Ver_singlets_merged@meta.data$treatment<-treat_detect
+
+#FIXME may not be needed if the integration workflow specifies what to consider anyway
+Idents(object=Ver_singlets_merged)<-"treatment"
+rm(sampleLabs, treat_detect)
+
+## Within dataset clustering
+
+# adapted from https://satijalab.org/seurat/articles/integration_introduction.html
+
+
+# split the dataset into a list of three seurat objects (ME7, NBH, AGEING)
+Ver_list<-SplitObject(Ver_singlets_merged, split.by = "treatment")
+
+#FIXME set the RNA assay as active
+DefaultAssay(Ver_list) <- "RNA"
+
+# normalize and identify variable features for each dataset independently
+Ver_list <- lapply(X = Ver_list, FUN = function(x) {
+    x <- NormalizeData(x)
+    x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+})
+
+# select features that are repeatedly variable across datasets for integration
+features <- SelectIntegrationFeatures(object.list = Ver_list)
+
+#identify anchors
+Verity.anchors <- FindIntegrationAnchors(object.list = Ver_list, anchor.features = features)
+
+# this command creates an 'integrated' data assay using the anchors
+Verity.combined <- IntegrateData(anchorset = Verity.anchors)
+
+#Perform integrated analysis
+# specify that we will perform downstream analysis on the corrected data note that the
+# original unmodified data still resides in the 'RNA' assay
+DefaultAssay(Verity.combined) <- "integrated"
+
+# Run the standard workflow for visualization and clustering
+Verity.combined <- ScaleData(Verity.combined, verbose = FALSE)
+Verity.combined <- RunPCA(Verity.combined, npcs = 30, verbose = FALSE)
+Verity.combined <- RunUMAP(Verity.combined, reduction = "pca", dims = 1:30)
+Verity.combined <- FindNeighbors(Verity.combined, reduction = "pca", dims = 1:30)
+Verity.combined <- FindClusters(Verity.combined, resolution = 0.5)
+
+# Visualization
+p1 <- DimPlot(Verity.combined, reduction = "umap", group.by = "treatment")
+p2 <- DimPlot(Verity.combined, reduction = "umap", label = TRUE, repel = TRUE)
+p1 + p2
+
+#Visualise treatments side by side
+DimPlot(Verity.combined, reduction = "umap", split.by = "treatment")
+```
+
+```{r}
+#DEGS
+# For performing differential expression after integration, we switch back to the original data
+DefaultAssay(Verity.combined) <- "RNA"
+nk.markers <- FindConservedMarkers(Verity.combined, ident.1 = 6, grouping.var = "treatment", verbose = FALSE)
+head(nk.markers)
+
+
+
+#Show the DEGS on the plot #FIXME tailor these depending on the results of the above head command
+
+
+
+FeaturePlot(Verity.combined, features = c("CD3D", "SELL", "CREM", "CD8A", "GNLY", "CD79A", "FCGR3A",
+    "CCL2", "PPBP"), min.cutoff = "q9")
+
+#Use manual identities  (probably use singleR)
+Verity.combined <- RenameIdents(Verity.combined, `0` = "CD14 Mono", `1` = "CD4 Naive T", `2` = "CD4 Memory T",
+    `3` = "CD16 Mono", `4` = "B", `5` = "CD8 T", `6` = "NK", `7` = "T activated", `8` = "DC", `9` = "B Activated",
+    `10` = "Mk", `11` = "pDC", `12` = "Eryth", `13` = "Mono/Mk Doublets", `14` = "HSPC")
+DimPlot(Verity.combined, label = TRUE)
+
+#up to https://satijalab.org/seurat/articles/integration_introduction.html#:~:text=The%20DotPlot()%20function%20with%20the%20split.by%20parameter%20can%20be%20useful%20for%20viewing%20conserved%20cell%20type%20markers%20across%20conditions%2C%20showing%20both%20the%20expression%20level%20and%20the%20percentage%20of%20cells%20in%20a%20cluster%20expressing%20any%20given%20gene.%20Here%20we%20plot%202%2D3%20strong%20marker%20genes%20for%20each%20of%20our%2014%20clusters.
+```
+
+#### Metadata for Slota
+
+Add metadata for Slota by using a document? treatment, dpi? Slota dpi is generally \~160-190, with one sample at 110. Should I wait to factor in dpi for DESeq2?
+
+See [sanger course](https://www.singlecellcourse.org/single-cell-rna-seq-analysis-using-seurat.html#sctransform-normalization-and-clustering) and go through steps to end of chapter 8
+
+### [DESeq2](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html)
+
+DESeq requires an experimental formula to determine the dispersions and etreatmentate log2 fodl change in the model. "put the variable of interest at the end of the formula and make sure the control level is the first level." There are [notes](https://bioconductor.org/packages/release/bioc/vignettes/DESeq2/inst/doc/DESeq2.html#standard-workflow:~:text=1%5D%20%22contr.treatment%22-,Recommendations%20for%20single%2Dcell%20analysis,-The%20DESeq2%20developers) on the use of DESeq2 for single cell.
+
+[DEG from sanger course too](https://www.singlecellcourse.org/biological-analysis.html#differential-expression-de-analysis)
+
+## Ximerakis rerun
+
+-   Copying Redux files across now to msc8. Need to wait until that is done.
+
+-   Msc8 is currently on the equivalent of Eddie scratch space git branch XimerakisRedux, checkout to that branch if pushing anything!
+
+-   Running doubletfiner now 14:23
+
+Rerunning Xiemrakis will mean adjusting the script to use Redux files instead of cr files.the outputs should be saved to a new folder of images. Use find and replace to add Redux to all png filenames, then export them to the folder by using mv bash command. Also change Rdata objects to include redux in filenames.
+
+look at ../../Rdata/Ximerakis_filtered.RData, ../../Rdata/Ximerakis_total.RData cell totals and compare to current totals of Redux variables.
+
+```{r}
+load("Rdata/Ximerakis_filtered.RData")
+load("Rdata/Ximerakis_filtered.RData")
+table(Ximerakis_total$sample)
+table(Ximerakis_total_Redux$sample)
+table(Ximerakis_filtered_Redux$sample)
+load("Rdata/Xim_singlets_mergedRedux.Rdata")
+load("Rdata/Ximerakis_total_seuratRedux.Rdata")
+gc()
+Ximerakis_total_Redux<-Ximerakis_total
+Xim_singlets_merged_Redux<-Xim_singlets_merged
+load("Rdata/Ximerakis_filtered.RData")
+Ximerakis_list_original<-Merge_Seurat_List(list_seurat = Ximerakis.list)
+Xim_singlets_merged <- subset(Ximerakis_list_original, subset= doublet_finder == 'Singlet')
+load("Rdata/Ximerakis_total.RData")
+table(Xim_singlets_merged$sample)
+table(Xim_singlets_merged_Redux$sample)
+sum(table(Xim_singlets_merged$sample))
+sum(table(Xim_singlets_merged_Redux$sample))
+sum(table(Ximerakis_total$sample))
+sum(table(Ximerakis_total_Redux$sample))
+```
+
+![](images/Ximerakis_reference_comparison.png)
+
+The comparison above shows t, although the new reference gave more inital cells after soupX, the number of cell which were filtered by all QC was harsher and resulted in around 2k fewer cells. This is the more accurate pipeline though, so I'm satisfied with that. I'd like to proceed with variable tidyup etc.
+
+For all scripts, use this to set assay
+
+```{r}
+DefaultAssay(srat) <- "RNA"
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Chat with Sam clarified that the current pathway is this: follow [this](https://satijalab.org/seurat/articles/integration_introduction.html), then carry out findvariable features for DGEs. The alternative pathway will be harmony then DESeq2 (add dpi for Slota, sex control for Verity when doing within group comparison).
+
+Ximerakis tidying up, check that the scripts are safe for the Redux
+
+Ximerakis run start of script without soupx for nGene plot by sample, amend Word doc

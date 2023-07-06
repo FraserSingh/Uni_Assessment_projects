@@ -1,0 +1,119 @@
+# 01/07/23
+
+## Plan today
+
+------------------------------------------------------------------------
+
+Verity witihn dataset integration and clustering
+
+------------------------------------------------------------------------
+
+## Verity within integration
+
+commands are running fine, but taking alot of time espdcially at the CCA stage. If I use RPCA instead which is faster, the [documentation](https://satijalab.org/seurat/articles/integration_rpca.html) mentions some conditions "\* A substantial fraction of cells in one dataset have no matching type in the other \* Datasets originate from the same platform (i.e. multiple lanes of 10x genomics) \* There are a large number of datasets or cells to integrate (see INSERT LINK for more tips on integrating large datasets)".
+
+Alterations to the code would include this after defining features:
+
+```{r}
+#Perform PCA on the data individually before integration
+Ver_list <- lapply(X = Ver_list, FUN = function(x) {
+    x <- ScaleData(x, features = features, verbose = FALSE)
+    x <- RunPCA(x, features = features, verbose = FALSE)
+})
+
+#USe RPCA
+Verity.anchors <- FindIntegrationAnchors(object.list = Ver_list, anchor.features = features, verbose=TRUE, reduction='rpca')
+```
+
+(Original)
+
+```{r}
+library(DropletUtils)
+library(Seurat)
+library(tidyverse)
+library(dplyr)
+library(stringr)
+library(knitr)
+library(DoubletFinder)
+library(SoupX)
+library(scCustomize)
+```
+
+### Make metadata for treatment
+
+```{r}
+sampleLabs<-names(Ver_singlets_merged@active.ident)
+
+#FIXME change these to be treatment levels of experimental setup
+
+#Assigning names to the samples to keep identity
+#From Chat GPT
+treat_detect <- case_when(
+  str_detect(sampleLabs, "sample11") ~ "AGEING",
+  str_detect(sampleLabs, "sample1") ~ "NBH",
+  str_detect(sampleLabs, "sample2") ~ "NBH",
+  str_detect(sampleLabs, "sample5") ~ "ME7",
+  str_detect(sampleLabs, "sample6") ~ "ME7",
+  str_detect(sampleLabs, "sample9") ~ "AGEING",
+  TRUE ~ NA_character_
+)
+#
+Ver_singlets_merged@meta.data$treatment<-treat_detect
+
+#FIXME may not be needed if the integration workflow specifies what to consider anyway
+Idents(object=Ver_singlets_merged)<-"treatment"
+rm(sampleLabs, treat_detect)
+```
+
+## Within dataset clustering
+
+```{r}
+# adapted from https://satijalab.org/seurat/articles/integration_introduction.html
+
+#FIXME set the RNA assay as active
+DefaultAssay(Ver_singlets_merged) <- "RNA"
+
+# split the dataset into a list of three seurat objects (ME7, NBH, AGEING)
+Ver_list<-SplitObject(Ver_singlets_merged, split.by = "treatment")
+rm(Ver_singlets_merged)
+
+# normalize and identify variable features for each dataset independently
+Ver_list <- lapply(X = Ver_list, FUN = function(x) {
+    x <- NormalizeData(x)
+    x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
+})
+
+# select features that are repeatedly variable across datasets for integration
+features <- SelectIntegrationFeatures(object.list = Ver_list)
+
+#identify anchors
+Verity.anchors <- FindIntegrationAnchors(object.list = Ver_list, anchor.features = features, verbose=TRUE)
+
+# this command creates an 'integrated' data assay using the anchors
+Verity.combined <- IntegrateData(anchorset = Verity.anchors)
+
+#save the object
+save(Verity.combined,"Rdata/Verity.self_integrated.Rdata")
+
+#Perform integrated analysis
+# specify that we will perform downstream analysis on the corrected data note that the
+# original unmodified data still resides in the 'RNA' assay
+DefaultAssay(Verity.combined) <- "integrated"
+
+# Run the standard workflow for visualization and clustering
+Verity.combined <- ScaleData(Verity.combined, verbose = FALSE)
+Verity.combined <- RunPCA(Verity.combined, npcs = 30, verbose = FALSE)
+Verity.combined <- RunUMAP(Verity.combined, reduction = "pca", dims = 1:30)
+Verity.combined <- FindNeighbors(Verity.combined, reduction = "pca", dims = 1:30)
+Verity.combined <- FindClusters(Verity.combined, resolution = 0.5)
+
+# Visualization
+p1 <- DimPlot(Verity.combined, reduction = "umap", group.by = "treatment")
+p2 <- DimPlot(Verity.combined, reduction = "umap", label = TRUE, repel = TRUE)
+p1 + p2
+
+#Visualise treatments side by side
+DimPlot(Verity.combined, reduction = "umap", split.by = "treatment")
+```
+
+## SUMMARY

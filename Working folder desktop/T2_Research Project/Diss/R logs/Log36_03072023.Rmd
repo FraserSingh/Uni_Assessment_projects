@@ -1,0 +1,100 @@
+# 03/07/23
+
+## Plan today
+
+Within clustering Verity, DEGs etc
+
+Presentation
+
+------------------------------------------------------------------------
+
+Running Verity FindIntegrationAnchors with default CCA, using RPCA might be required.
+
+Running RPCA section of Verity_RPCA_clustering.Rmd, seems to have combined everything. Some reading on [CCA](https://www.cell.com/cell/fulltext/S0092-8674(19)30559-8?_returnURL=https%3A%2F%2Flinkinghub.elsevier.com%2Fretrieve%2Fpii%2FS0092867419305598%3Fshowall%3Dtrue#secsectitle0020) to demonstrate it.
+
+```{r}
+#Using traditional CCA
+Verity.anchors_CCA <- FindIntegrationAnchors(object.list = Ver_list, anchor.features = features, verbose=TRUE)
+# 
+# Scaling features for provided objects
+#   |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=13s  
+# Finding all pairwise anchors
+#   |                                                  | 0 % ~calculating  Running CCA
+# Merging objects
+# Finding neighborhoods
+# Finding anchors
+# 	Found 54734 anchors
+# Filtering anchors
+# 	Retained 30472 anchors
+#   |+++++++++++++++++                                 | 33% ~02h 13m 31s  Running CCA
+# Merging objects
+# Finding neighborhoods
+# Finding anchors
+# 	Found 63488 anchors
+# Filtering anchors
+```
+
+You can check for batch effects and technical variation in clustering the merged but not integrated dataset: <https://youtu.be/HrbeaEJqKcY?t=1472>
+
+Go from [here](https://youtu.be/1i6T9hpvwg0?t=198) to see difference between marker commands.
+
+Go from [here](https://youtu.be/5HBzgsz8qyk?t=1488) to see workflow ending.
+
+## Add cell labelling
+
+To label cells automatically: <https://bioconductor.org/packages/release/data/experiment/vignettes/celldex/inst/doc/userguide.html>. Possible [single cell datasets](https://bioconductor.org/packages/3.17/data/experiment/vignettes/scRNAseq/inst/doc/scRNAseq.html#available-data-sets) to use according to [celldex guide](https://www.bioconductor.org/packages/release/bioc/vignettes/SingleR/inst/doc/SingleR.html#:~:text=3-,Using%20single%2Dcell%20references,-Here%2C%20we%20will).
+
+USing this for single cell (requires some [tailoring](https://www.bioconductor.org/packages/release/bioc/vignettes/SingleR/inst/doc/SingleR.html#:~:text=We%20then%20run,is%20frequently%20zero)).
+
+```{r}
+library(SingleR)
+library(celldex)
+
+#FIXME change the reference which is loaded to the mouse one
+#library(celldex)
+mouse.ref <- celldex::MouseRNAseqData()
+
+sce <- as.SingleCellExperiment(Verity.combined)
+
+mouse.main <- SingleR(test=sce, ref=mouse.ref, labels=mouse.ref$label.main, de.method="wilcox")
+
+mouse.fine <- SingleR(test=sce, ref=mouse.ref, labels=mouse.ref$label.fine, de.method="wilcox")
+
+table(pred.grun$labels)
+
+# https://github.com/LTLA/SingleR/blob/master/README.md
+#Add annotation back to Seruat object
+Verity.combined[["SingleR.labels.main"]] <- mouse.main$labels
+
+
+Verity.combined <- SetIdent(Verity.combined, value = "SingleR.labels.main")
+
+DimPlot(Verity.combined, label = T , repel = T, label.size = 3, raster=F) + NoLegend()
+```
+
+Celldex documentation has some good tips for [assessing the annotation](https://www.bioconductor.org/packages/release/bioc/vignettes/SingleR/inst/doc/SingleR.html#4_Annotation_diagnostics)
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+We integrated data to remove batch effects originating from sample and make comparisons easier. investigate manual cell labelling, is it by cluster? can we give a specific gene combo the name of a cell type?
+
+-   amend the clustering data with
+
+    ```{r}
+    #generate multiple clustering resolutions
+    FindClusters(seurat,resolution=c(0.2,0.3,0.5,0.7,1))
+
+    #Show the clustering, plot for each resolution by replacing x in the group_by param.
+    Dimplot(seurat, group.by="RNA_snn_res.x", label=TRUE)
+    ```
+
+Have left R session running but don't want to touch in case it dies. The CCA approach has been running for four hours so far.
+
+```{r}
+#if required, hopefully reload with the variable saved at:
+save(Verity.anchors_CCA,file="Rdata/Verity.anchors_CCA.RData")
+```
+
+carry out findvariable features for DGEs

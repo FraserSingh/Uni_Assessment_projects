@@ -1,0 +1,127 @@
+# \\06/07/23 
+
+## Plan today
+
+Harmony Integration script
+
+GSEA on first gene list in comparison between NBH and ME7 in Verity
+
+------------------------------------------------------------------------
+
+
+## Second draft of integration script (first in log33)
+
+```{r}
+#Load all of the relevant data. This will be soup-less, doublet-filtered Seruat objects from each paper
+
+load("Rdata/Ver_singlets_merged.RData")
+load("Rdata/Xim_singlets_merged.RData")
+load("Rdata/Slo_singlets_merged.RData")
+
+gc()
+#What would the size of this be in memory?
+
+#Set active assays to RNA
+DefaultAssay(Slo_singlets_merged) <- "RNA"
+DefaultAssay(Xim_singlets_merged) <- "RNA"
+DefaultAssay(Ver_singlets_merged) <- "RNA"
+```
+
+```{r}
+#Add metadata on treatment
+#Slota
+#From Chat GPT
+sampleLabs_Slota<- #FIXME
+
+treat_detect_Slota <- case_when(
+  str_detect(sampleLabs, "RML*HP") ~ "RML_HP",
+  str_detect(sampleLabs, "PBS*HP") ~ "PBS_HP",
+  str_detect(sampleLabs, "RML*CX") ~ "RML_CX",
+  str_detect(sampleLabs, "PBS*CX") ~ "PBS_CX",
+  TRUE ~ NA_character_
+)
+
+Slo_singlets_merged@meta.data$treatment<-treat_detect_Slota
+Idents(object=Slo_singlets_merged)<-"treatment"
+rm(treat_detect, sampleLabs_Slota)
+```
+
+
+
+```{r}
+#split, then subset and merge the relevant data into the comparison datasets as detailed in the comparison table above
+Xim_list<-SplitObject(Xim_singlets_merged, split.by = "treatment")
+Slo_list<-SplitObject(Slo_singlets_merged, split.by = "treatment")
+Ver_list<-SplitObject(Ver_singlets_merged, split.by = "treatment")
+```
+
+```{r}
+#COMPARISON 1 Hippocampus DEG between datasets (Verity and terminal)
+#list of samples to merge
+comp1a<-list(subset(Slo_singlets_merged,subset=treatment=="*HP")) #FIXME check sample name, seeing in regex works
+comp1b<-list(Ver_singlets_merged)
+
+comp1<-list(comp1a,comp1b)
+# Merge raw samples, adapted from here https://hbctraining.github.io/scRNA-seq_online/lessons/06a_integration_harmony.html
+comp1_merged <-Merge_Seurat_List(list_seurat=comp1) 
+
+rm(list(comp1), )
+gc()
+
+# Perform log-normalization and feature selection, as well as SCT normalization on global object
+comp1_merged <- comp1_merged %>%
+    NormalizeData() %>%
+    FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>% 
+    ScaleData() %>%
+    SCTransform(vars.to.regress = c("mitoRatio")) #FIXME do we need this?
+
+# Calculate PCs using variable features determined by SCTransform (3000 by default)
+comp1_merged <- RunPCA(comp1_merged, assay = "SCT", npcs = 50)
+
+comp1_merged_harmonized <- RunHarmony(comp1_merged, 
+				group.by.vars = c("sample_id", "experiment_date"), #FIXME variable names to integrate on
+				reduction = "pca", assay.use = "SCT", reduction.save = "harmony")
+
+comp1_merged_harmonized <- RunUMAP(comp1_merged_harmonized, reduction = "harmony", assay = "SCT", dims = 1:40)
+
+```
+
+```{r}
+#COMPARISON 2
+#list of samples to merge
+comp2a<-list(subset(Slo_singlets_merged,subset=sample==c("RML122HP","RML142HP","RML133HP","RML132HP","RML138HP","RML145HP","RML140HP"))) #FIXME check sample names
+comp2b<-list(subset(Ver_singlets_merged,subset=sample==c("sample5", "sample6")))
+comp2c<-list(subset(Ver_singlets_merged,subset=sample==c("OX1X","OX2X","OX3X", "OX4X","OX5X","OX6X","OX7X","OX8X")))
+
+comp2<-list(comp2a,comp2b, comp2c)
+# Merge raw samples, adapted from here https://hbctraining.github.io/scRNA-seq_online/lessons/06a_integration_harmony.html
+comp2_merged <-Merge_Seurat_List(list_seurat=comp1) 
+
+rm(list(comp2))
+gc()
+
+# Perform log-normalization and feature selection, as well as SCT normalization on global object
+comp2_merged <- comp2_merged %>%
+    NormalizeData() %>%
+    FindVariableFeatures(selection.method = "vst", nfeatures = 2000) %>% 
+    ScaleData() %>%
+    SCTransform(vars.to.regress = c("mitoRatio")) #FIXME do we need this?
+
+# Calculate PCs using variable features determined by SCTransform (3000 by default)
+comp2_merged <- RunPCA(comp2_merged, assay = "SCT", npcs = 50)
+
+comp2_merged_harmonized <- RunHarmony(comp2_merged, 
+				group.by.vars = c("sample_id", "experiment_date"), #FIXME variable names to integrate on
+				reduction = "pca", assay.use = "SCT", reduction.save = "harmony")
+
+comp2_merged_harmonized <- RunUMAP(comp2_merged_harmonized, reduction = "harmony", assay = "SCT", dims = 1:40)
+
+```
+
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Got the harmony prep working but package conflicts are stopping running of harmony, saved image as PRe_harmony_objects.RData
+
