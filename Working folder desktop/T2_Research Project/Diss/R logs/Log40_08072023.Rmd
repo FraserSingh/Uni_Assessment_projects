@@ -1,0 +1,45 @@
+# 9/7/23
+
+## Plan today
+
+Run Slota rest of workflow, from Clustering
+
+Do the same on Ximerakis
+
+Identify Astrocytes in each for potential subsetting in Harmonisation
+
+------------------------------------------------------------------------
+
+## Slota clustering
+
+Getting to the stage of frunning FindMarkers but an issue with geometric mean is stopping me. The issu [has been documented](https://github.com/satijalab/seurat/issues/1570) previously, but no real solution aside from adding a single count to normalised data to eliminate 0 counts. I stuck with this, but need to think through what the statistical significance of this action is.
+
+```{r}
+
+converting counts to integer mode
+Error in estimateSizeFactorsForMatrix(counts(object), locfunc = locfunc,  : 
+  every gene contains at least one zero, cannot compute log geometric means
+```
+
+Could set Verity astrocyte subclustering to be done with the cell annotations from SingleR, as as done in my Slota workflow.
+
+Can use negative binom test.use option
+
+```         
+> table(Slo_astrocytes$treatment)
+
+PBS_CX PBS_HP RML_CX RML_HP 
+  4298   2148    664    261 
+> table(Slo_astrocytes$SingleR.labels.fine)
+
+          Astrocytes Astrocytes activated 
+                7360                   11 
+```
+
+Need to check for astrocyte subpopulations accoridng to literature then identify which clusters are of interest in Slota to choose which clusters to focus on.
+
+HAve saved DEGs by treatment for Slota. Could do same for Ximerakis.
+
+------------------------------------------------------------------------
+
+## SUMMARY

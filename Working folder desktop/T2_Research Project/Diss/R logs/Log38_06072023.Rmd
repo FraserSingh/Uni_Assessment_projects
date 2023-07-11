@@ -1,4 +1,4 @@
-# \\06/07/23 
+# \\06/07/23
 
 ## Plan today
 
@@ -7,7 +7,6 @@ Harmony Integration script
 GSEA on first gene list in comparison between NBH and ME7 in Verity
 
 ------------------------------------------------------------------------
-
 
 ## Second draft of integration script (first in log33)
 
@@ -45,8 +44,6 @@ Slo_singlets_merged@meta.data$treatment<-treat_detect_Slota
 Idents(object=Slo_singlets_merged)<-"treatment"
 rm(treat_detect, sampleLabs_Slota)
 ```
-
-
 
 ```{r}
 #split, then subset and merge the relevant data into the comparison datasets as detailed in the comparison table above
@@ -118,10 +115,8 @@ comp2_merged_harmonized <- RunUMAP(comp2_merged_harmonized, reduction = "harmony
 
 ```
 
-
 ------------------------------------------------------------------------
 
 ## SUMMARY
 
-Got the harmony prep working but package conflicts are stopping running of harmony, saved image as PRe_harmony_objects.RData
-
+Got the harmony working, saved image as PRe_harmony_objects.RData. Saved images of integration as Verity_Slota_pre_integration and post_integration. Not much overlapping after harmonising, maybe identify astrocytes first then do harmonising?

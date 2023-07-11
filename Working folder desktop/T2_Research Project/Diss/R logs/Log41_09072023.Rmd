@@ -1,0 +1,69 @@
+# 10/07/23
+
+## Plan today
+
+Look at DEG lists from within each dataset
+
+Consider effects of negbinom instead of DESeq2
+
+Integrate astrocytes with Harmony
+
+Add upper QC filter to reads
+
+-   Show the limit for each by feature and UMIs plot
+
+Read for gene markers on astrocyte subpopulations/genes which are DE
+
+stacked barplots for each of the external datasets
+
+------------------------------------------------------------------------
+
+## DEGs
+
+Put Verity and Slota astrocyte treatment DEGs into a single [excel spreadsheet](https://uoe-my.sharepoint.com/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Diss/Outputs/Verity_Slota_prions_DEGs_!.xlsx?web=1) . Filtered by p_val_adj\<0.5 and will put into David.
+
+Added Functional Annotation Cluster information fro David to the excel sheet.
+
+## Sex-linked genes
+
+Accesses Biomart Human (GRCh37.p13) and Mouse (GRCm39) genes and filtered by region: chromosome Y. The gene names for mouse's biomart were not compatible with our data's gene symbols, so I'll have to convert to ensembl ids then filter with that. INSTEAD, a preliminary check of the current DEG lists shows no overlap of ensembl chromosome y genes.
+
+Hi,
+
+OK, so you have a GTF, good.  All you need now then is a quick bash+awk one-liner using grep.    So, if your gtf looks like this, for example:
+
+1       ensembl_havana  gene    1211340 1214153 .       -       .       gene_id "ENSG00000186827"; gene_version "11"; gene_name "TNFRSF4"; gene_source "ensembl_havana"; gene_biotype "protein_coding";
+
+then all that is needed is
+
+***zcat Mygtf.gtf.gz \| awk 'BEGIN{FS="\\t";OFS="\\t";}{if(\$1=="Y" && \$3=="gene"){print \$0}}' \> My_Y\_chr_loci.gtf***
+
+Obviously, you could also parse \$9 to get the genename out in either Ensembl and/or "Symbol" formats on the fly too.
+
+```{bash}
+#save the y chromosome data from the gtf file to a new file
+cat ../Ensembl_refs/Mus_musculus.GRCm39.109.gtf | awk -F '[\t;]' 'BEGIN{OFS="\t"} $1=="Y" && $3=="gene" {print $0}' > My_Y_chr_loci.gtf
+cat My_Y_chr_loci.gtf
+```
+
+```{r}
+#Check for sex linked genes in Verity data
+
+# Read the file as a single column
+ychromosome_genes <- read.table("My_Y_chr_loci.gtf", sep="\n", header=FALSE)
+# Split the single column into separate fields using tab or semicolon as separators
+ychromosome_genes <- strsplit(ychromosome_genes$V1, "\t|;")
+# Convert the resulting list into a data frame
+ychromosome_genes$V11 <- sub("^ gene_name", "", ychromosome_genes$V11)
+ychromosome_genes$V9 <- sub("^gene_id ", "", ychromosome_genes$V9)
+ensembl_verity<-read.csv("../Group_data/combined/all_genes.csv")
+matching_feats<-ychromosome_genes$V11%in% Verity.combinedNBHME7[["RNA"]]@data@Dimnames[[1]]
+matching_df <- ychromosome_genes[matching_feats, ]
+View(matching_df)
+```
+
+This list's gene symbols (1593 genes) are not in Verity or Slota DEGs either, but their presence in the workflow may be skewing figures....
+
+------------------------------------------------------------------------
+
+## SUMMARY

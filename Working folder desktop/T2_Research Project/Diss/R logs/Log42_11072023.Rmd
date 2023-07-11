@@ -1,0 +1,78 @@
+# 11/07/23
+
+## Plan today
+
+Supervisor meeting
+
+Do clustering investigation accoridng to supervisor meeting
+
+Read literature for understanding
+
+heading notes
+
+------------------------------------------------------------------------
+
+## Weekly meeting notes
+
+#### Functional annotation
+
+Chcek DAVID for the KEGG info, or run KEGG separately on the gene list to get more relevant pathway info
+
+Ensembl gene on biomart could also give pathway information
+
+#### Data work
+
+Don't filter sex genes out, as this would be bias filtering of the data and goes against what I think is correct.
+
+Add metadata too the gene counts as binary Y chromosome vs. not to see whether it is driving clustering. Hopefully the male genes are spread throughout the data enough to prevent any feasible action.
+
+Slota, annotate a Featureplot with the weird sample names.
+
+#### Scoping out next steps
+
+Is there enough information in my results to create a narrative yet? if not, keep going
+
+It's about the quality of the narrative, not the quality of the results really
+
+Make headings for what I want in the dissertation discussion to give goals and a structure to the next work steps.
+
+Check proposal notes for some direction
+
+#### Writing and topics
+
+Biology -\> ideas -\> work -\> biology
+
+Meet with Nick and Neil for clarification on the biology
+
+Comparisons with external datasets are the important part and more interesting parts, think through what the comparisons could be.
+
+Consider the astrocyte subclusters as a secondary aim
+
+## Data work
+
+### Verity sex-linked genes
+
+After generating list of y chromosome genes in log 41, I will now make gene metadata for Verity, saying that if the gene is in the list then the equivalent male vs non male gene metadata is TRUE. One hot encoding?
+
+```{r}
+head(seurat[["RNA"]][[]])
+
+# Read the file as a single column
+ychromosome_genes <- read.table("My_Y_chr_loci.gtf", sep="\n", header=FALSE)
+# Split the single column into separate fields using tab or semicolon as separators
+ychromosome_genes <- strsplit(ychromosome_genes$V1, "\t|;")
+# Convert the resulting list into a data frame
+ychromosome_genes$V11 <- sub("^ gene_name", "", ychromosome_genes$V11)
+ychromosome_genes$V9 <- sub("^gene_id ", "", ychromosome_genes$V9)
+
+#Generate TRUE/FLASE boolean vector of the ChrY status, generates list the length of Verity data, if you want list of the genes in verity which are chrY, then swap the two lists in the command to make a short/ subset list
+matching_feats<-Verity.combinedNBHME7[["RNA"]]@data@Dimnames[[1]]%in% ychromosome_genes$V11
+#convert to more descriptive annotation
+matching_feats <- ifelse(matching_feats, 'ChrY', 'Other')
+
+Verity.combinedNBHME7[["RNA"]]@meta.features$ChrY_status<-matching_feats
+```
+
+------------------------------------------------------------------------
+
+## SUMMARY

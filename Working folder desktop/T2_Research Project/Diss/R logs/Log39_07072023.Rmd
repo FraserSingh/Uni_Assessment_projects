@@ -1,0 +1,102 @@
+# 07/07/23
+
+## Plan today
+
+Within dataset Clustering
+
+-   Try cell annotation on Verity ✅
+
+-   Perform Sltoa and Xiemrakis clustering by copying Verity script across
+
+-   Identify Astrocytes in each for potential subsetting in Harmonisation
+
+Harmony
+
+-   See what the overlapping cluster is in the harmonized image,✅
+
+    -   it is astrocytes, but mostly from Verity data as the integratio didn't work well
+
+-   Potentially redo harmony with only astrocytes
+
+-   setup comparison 2
+
+GSEA on David
+
+-   Rethink the comparison group in Verity, is the list of genes the correct way round? Want to see the genes changed in prions so set that as ident.1
+
+------------------------------------------------------------------------
+
+Cluster each dataset separately and annotate to know what to expect when integrating. Integration should reflect the broad clustering.
+
+## Add cell labelling, FROM LOG 36
+
+To label cells automatically: <https://bioconductor.org/packages/release/data/experiment/vignettes/celldex/inst/doc/userguide.html>. Possible [single cell datasets](https://bioconductor.org/packages/3.17/data/experiment/vignettes/scRNAseq/inst/doc/scRNAseq.html#available-data-sets) to use according to [celldex guide](https://www.bioconductor.org/packages/release/bioc/vignettes/SingleR/inst/doc/SingleR.html#:~:text=3-,Using%20single%2Dcell%20references,-Here%2C%20we%20will).
+
+USing this for single cell (requires some [tailoring](https://www.bioconductor.org/packages/release/bioc/vignettes/SingleR/inst/doc/SingleR.html#:~:text=We%20then%20run,is%20frequently%20zero)).
+
+```{r}
+library(SingleR)
+library(celldex)
+
+#FIXME change the reference which is loaded to the mouse one
+#library(celldex)
+mouse.ref <- celldex::MouseRNAseqData()
+
+sce <- as.SingleCellExperiment(Verity.combined)
+
+mouse.main <- SingleR(test=sce, ref=mouse.ref, labels=mouse.ref$label.main, de.method="wilcox")
+
+mouse.fine <- SingleR(test=sce, ref=mouse.ref, labels=mouse.ref$label.fine, de.method="wilcox")
+
+table(pred.grun$labels)
+
+# https://github.com/LTLA/SingleR/blob/master/README.md
+#Add annotation back to Seruat object
+Verity.combined[["SingleR.labels.main"]] <- mouse.main$labels
+
+
+Verity.combined <- SetIdent(Verity.combined, value = "SingleR.labels.main")
+
+DimPlot(Verity.combined, label = T , repel = T, label.size = 3, raster=F) + NoLegend()
+```
+
+Celldex documentation has some good tips for [assessing the annotation](https://www.bioconductor.org/packages/release/bioc/vignettes/SingleR/inst/doc/SingleR.html#4_Annotation_diagnostics)
+
+![Fine labels, Neurons are large percentage of population](images/Verity_Cell_annotation1.png)
+
+Astrocyte activation according to cell annotation.
+
+```{r eval=FALSE, include=FALSE}
+> ptME7[ptME7$Cell_name=='Astrocytes activated',]
+  Freq            Cell_name treatment Percent_prevalence
+6   84 Astrocytes activated       ME7          0.2617883
+> ptNBH[ptNBH$Cell_name=='Astrocytes activated',]
+   Freq            Cell_name treatment Percent_prevalence
+31    3 Astrocytes activated       NBH         0.00726533
+```
+
+## Harmony
+
+Clustering Verity and Slota gives poorly integrated data overall, even when the treatment labels are standardised (I thought this would help harmony, but the integration went worse).
+
+![Before any integration](images/Verity_Slota_pre_integration.png)
+
+![After integration with different treatment labels for each dataset](images/Verity_Slota_post_integration.png)
+
+![Consistent treatment labels did not improve integration.](images/Verity_Slota_consistent_treatment_post_harmony.png){width="865"}
+
+Could I show membership of clsuters with plot_integrated_clusters(pbmc_seurat)
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+From Nick: Could use the pre-print paper's media 3 (and 1?) to show the neuronal populations in the external datasets and show that this is lost in our data due to the single nuclear approach. Explain that this makes our dataset unsuitable for neuronal investigation. Show the membership of data by use ggplot shapes for sample origin and colour for gene expression level.
+
+If DEG list is too long, use LFC to filter, increasing from 0.25 minimum (representing a 50% increase)
+
+Started Slota rewrite but need to run it from after doubletfinder
+
+Intro
+
+What is prions, similarity to other neurodegenerative diseases, prions progression stages, cortex delayed, what are astrocytes, what are microglia?astrocytes not being important, then categroised as A1 A2, now a spectrum of activation profiles.
