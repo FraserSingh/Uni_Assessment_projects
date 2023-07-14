@@ -20,7 +20,7 @@ stacked barplots for each of the external datasets
 
 ## DEGs
 
-Put Verity and Slota astrocyte treatment DEGs into a single [excel spreadsheet](https://uoe-my.sharepoint.com/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Diss/Outputs/Verity_Slota_prions_DEGs_!.xlsx?web=1) . Filtered by p_val_adj\<0.5 and will put into David.
+Put Verity and Slota astrocyte treatment DEGs into a single [excel spreadsheet](https://uoe-my.sharepoint.com/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Diss/Outputs/Verity_Slota_prions_DEGs_!.xlsx?web=1) . Filtered by p_val_adj\<0.5 (ERROR) and will put into David.
 
 Added Functional Annotation Cluster information fro David to the excel sheet.
 

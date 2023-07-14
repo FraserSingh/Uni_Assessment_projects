@@ -1,0 +1,237 @@
+# 12/07/23
+
+## Plan today
+
+#### Presentation
+
+Read and write for presentation, will entail some interpretation of data
+
+Key decision and problems, dataset stuff from weekly presentations.
+
+-   Read literature papers first?
+
+-   Read proposal and feedback for question for intro
+
+-   Read through FAC excel for comparison of processes upregulated.
+
+-   Venn diagrams for DEGs: Hpvhps hpscx hpvcx hpshpvcx
+
+    ```{r}
+    #load the markers for Verity
+    load("Rdata/Verity_astrocyte_prion.markers.RData")
+
+    #load the markers for Slota Hippocampus
+    load("Rdata/Slota_astrocyte_prion.markers.RData")
+    load("Rdata/Slota_astrocyte_prion.markers_CX.RData")
+
+
+    #filter the data so that avg_log2FC > 0.5, p_val_adj<0.05
+      DEG_data_Verity_SLota<-list(Slota_astrocyte_prion.markers_CX,Slota_astrocyte_prion.markers,Verity_astrocyte_prion.markers)
+
+    #Filter data
+
+    DEG_data_Verity_SLota <- lapply(DEG_data_Verity_SLota, function(DEG_part) {
+      # Make a membership difference column to filter on
+      DEG_part$pct1_pct2_diff <- DEG_part$pct.1 - DEG_part$pct.2
+      
+      #filter by log change, p values and difference in membership
+      DEG_part<-subset(DEG_part, avg_log2FC > 0.5 & p_val_adj < 0.05 & pct1_pct2_diff >-0.1)
+      
+      #check if filtering has left anything 
+      #print(colnames(DEG_part))
+      
+      DEG_part  # Return the modified data frame
+    })
+
+
+    #make character vectors of names
+    DEG_names_SLota_CX<-rownames(DEG_data_Verity_SLota[[1]])
+    DEG_names_SLota_HP<-rownames(DEG_data_Verity_SLota[[2]])
+    DEG_names_Verity<-rownames(DEG_data_Verity_SLota[[3]])
+
+    library(gplots)
+    # Create a Venn-diagram given just the list of gene-names for both sets
+    venn_diagram <- venn(list("Verity_HP" = DEG_names_Verity,
+                              "SlotA_HP" = DEG_names_SLota_HP,
+                              "Slota_CX" = DEG_names_SLota_CX))
+
+    # Retrieving the list of classifications
+    venn_diagram
+
+
+
+    #Alternative adapted from https://www.datanovia.com/en/blog/venn-diagram-with-r-or-rstudio-a-million-ways/
+    if (!require(devtools)) install.packages("devtools")
+    devtools::install_github("gaospecial/ggVennDiagram")
+
+    library("ggVennDiagram")
+    ggVennDiagram(x, label_alpha = 0)
+
+
+    #Alternative tool
+    if (!require(devtools)) install.packages("devtools")
+    devtools::install_github("yanlinlin82/ggvenn")
+
+    library(ggvenn)
+    ggvenn(
+      DEGS_Verity_SLota, 
+      fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+      stroke_size = 0.5, set_name_size = 4
+      )
+
+    ```
+
+-   cell type barchart for each dataset
+
+    ```{r}
+    #https://bioinformatics.stackexchange.com/questions/11150/percentage-of-each-cluster-in-seurat
+    Slota.combined@active.ident<-as.factor(Slota.combined$SingleR.labels.fine)
+    pt <- table(Idents(Slota.combined), Slota.combined$treatment)
+    pt <- as.data.frame(pt)
+    pt$Cell_name <- as.character(pt$Var1);pt$Var1<-NULL
+    pt$treatment<-as.character(pt$Var2);pt$Var2<-NULL
+    RML_CX<-pt[pt$treatment=='RML_CX',]
+    RML_HP<-pt[pt$treatment=='RML_HP',]
+    RML_CX$Percent_prevalence <- (RML_CX$Freq / sum(RML_CX$Freq))*100
+    RML_HP$Percent_prevalence <- (RML_HP$Freq / sum(RML_HP$Freq))*100
+
+    #Showing how the difference in activated astrocytes between treatments
+    RML_HP[RML_HP$Cell_name=='Astrocytes activated',]
+    RML_CX[RML_CX$Cell_name=='Astrocytes activated',]
+
+
+    #https://stackoverflow.com/questions/9563711/r-color-palettes-for-many-data-classes and ChatGPT
+    (table(pt$treatment))
+
+    # build-in color palette
+    Glasbey = glasbey.colors(30)
+    swatch(Glasbey)
+
+
+    # Create a factor variable with x-axis labels in reverse alphabetical order
+    pt$treatment <- factor(pt$treatment, levels = rev(unique(pt$treatment)))
+
+    ggplot(pt, aes(x = treatment, y = Freq, fill = Cell_name)) +
+      theme_bw(base_size = 15) +
+      geom_col(position = "fill", width = 0.5) +
+      xlab("Condition") +
+      ylab("Proportion") +
+      scale_fill_manual(values = as.vector(Glasbey)) +
+      theme(legend.title = element_blank()) +
+      ggtitle("Cell identity in Slota dataset", subtitle = "Annotated by SingleR")
+    ```
+
+    ```{r}
+    Ximerakis.combined@active.ident<-as.factor(Ximerakis.combined$SingleR.labels.fine)
+    pt <- table(Idents(Ximerakis.combined), Ximerakis.combined$treatment)
+    pt <- as.data.frame(pt)
+    pt$Cell_name <- as.character(pt$Var1);pt$Var1<-NULL
+    pt$treatment<-as.character(pt$Var2);pt$Var2<-NULL
+    AGED<-pt[pt$treatment=='AGED',]
+    YOUNG<-pt[pt$treatment=='YOUNG',]
+    AGED$Percent_prevalence <- (AGED$Freq / sum(AGED$Freq))*100
+    YOUNG$Percent_prevalence <- (YOUNG$Freq / sum(YOUNG$Freq))*100
+
+    #Showing how the difference in activated astrocytes between treatments
+    AGED[AGED$Cell_name=='Astrocytes activated',]
+    YOUNG[YOUNG$Cell_name=='Astrocytes activated',]
+
+
+    #https://stackoverflow.com/questions/9563711/r-color-palettes-for-many-data-classes and ChatGPT
+    (table(pt$treatment))
+
+    # build-in color palette
+    # Glasbey = glasbey.colors(30)
+    # swatch(Glasbey)
+
+
+    # Create a factor variable with x-axis labels in reverse alphabetical order
+    pt$treatment <- factor(pt$treatment, levels = rev(unique(pt$treatment)))
+
+    ggplot(pt, aes(x = treatment, y = Freq, fill = Cell_name)) +
+      theme_bw(base_size = 15) +
+      geom_col(position = "fill", width = 0.5) +
+      xlab("Condition") +
+      ylab("Proportion") +
+      scale_fill_manual(values = as.vector(Glasbey)) +
+      theme(legend.title = element_blank()) +
+      ggtitle("Cell identity in Ximerakis dataset", subtitle = "Annotated by SingleR")
+    ```
+
+-   Biomart for basic descriptions
+
+    ```{r}
+    #Adapted from http://girke.bioinformatics.ucr.edu/CSHL_RNAseq/mydoc/mydoc_systemPipeRNAseq_07/
+    library("biomaRt")
+    m <- useMart("ensembl", dataset="mmusculus_gene_ensembl")
+
+    Verity_astrocyte_prion.markers$gene<-rownames(Verity_astrocyte_prion.markers)
+    gene_ids <- unique(Verity_astrocyte_prion.markers$gene)
+
+    gene_info <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "description","chromosome_name"), filters = "external_gene_name", values = gene_ids, mart = m)
+
+    #apply the infor to the gene list
+    gene_markers_with_info <- merge(Verity_astrocyte_prion.markers, gene_info, by.x = "gene", by.y = "external_gene_name", all.x = TRUE)
+
+
+
+    DEG_data_Verity_SLota <- lapply(DEG_data_Verity_SLota, function(DEG_part) {
+      #store gene names and use them
+      DEG_part$gene<-rownames(DEG_part)
+      gene_ids <- unique(Verity_astrocyte_prion.markers$gene)
+      
+      #get relevant info from the mart
+      gene_info <- getBM(attributes = c("ensembl_gene_id", "external_gene_name", "description","chromosome_name"), filters = "external_gene_name", values = gene_ids, mart = m)
+      
+      #apply the info to the gene list
+      DEG_part <- merge(DEG_part, gene_info, by.x = "gene", by.y = "external_gene_name", all.x = TRUE)
+      
+      DEG_part  # Return the modified data frame
+    })
+    ```
+
+#### Data generation
+
+-   Could violin plot harmonised Verity and slota: Plot for each treatment level, with violin for each sample (set ident to sample and split by treatment)
+
+-   Show venndiagram of DEG lists
+
+-   Heatmaps
+
+    -   [https://github.com/jslota/scRNAseq-prion-infection/blob/main/script_13_heatmap_data.](https://github.com/jslota/scRNAseq-prion-infection/blob/main/script_13_heatmap_data.R)
+
+    -   <https://satijalab.org/seurat/articles/visualization_vignette.html>
+
+Check for Glasbey colours in MarkersTable if needed again
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+To check with Nick tomorrow:
+
+The Ximerakis aged markers is wrong (only a few), Slota must be wrong too as membership is 1 for each pct.
+
+Check naming convention for stacked bar charts
+
+[Literature](https://www.pnas.org/doi/10.1073/pnas.1716322115) on NRG3
+
+NEed to rerun findmarkers with defaulst to make DEG lists with proper astrocytes
+
+```{r}
+#see Verity workflow
+Ver_astrocytes@active.ident<-as.factor(Ver_astrocytes$treatment)
+Verity_astrocyte_prion.markers_defaults <- FindMarkers(Ver_astrocytes, ident.1 = 'ME7', min.pct = 0.10, verbose = TRUE, test.use = "DESeq2")
+```
+
+upper gene filters on Ximerakis
+
+repeat the 'work on NBH vs ME7 only for integration' but with NBH vs. Ageing
+
+Have run up to Find DEGs within the astrocyte subclusters in Verity, need to finish making list then do Slota.
+
+-   MAke DEG lists from Verity, then try to identify the astrocytes on Slota.
+
+## Notes from group presentation

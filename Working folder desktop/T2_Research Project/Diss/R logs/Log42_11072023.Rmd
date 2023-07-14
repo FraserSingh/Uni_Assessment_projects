@@ -4,7 +4,7 @@
 
 Supervisor meeting
 
-Do clustering investigation accoridng to supervisor meeting
+Do clustering investigation according to supervisor meeting
 
 Read literature for understanding
 
@@ -38,6 +38,14 @@ Make headings for what I want in the dissertation discussion to give goals and a
 
 Check proposal notes for some direction
 
+*Prion diseases are uncommon in humans with an incidence rate of 1-2/1 million, but I'd argue that in-vivo prion disease is one of the best models for protein misfolding neurodegeneration as a whole. So you could link information gained in these studies to other protein misfolding neurodegenerative diseases as a part of the purpose and background sections if you wanted. Plenty of papers targeting a given pathway in multiple models demonstrating similarities (or disproving them) and reviews that look at both the positive and negative aspects of trying to do this. Also, suggests potential future work looking at RNAseq datasets from such disorders and comparing it to your dataset. Would be particularly interesting given the primary correlate for neurodegenerative conditions is aging. Wouldn't need to be exhaustive (and couldn't be given your space limits).*
+
+*Have a peek at the links I sent you previously vis-à-vis reactive astrogliosis.*
+
+*Young mice are all female: aged are male -- confounding factor (you mention it but needs correcting)*
+
+*As Neil said, this is a discovery project whereby we are looking to characterise what is happening during key time points, validation of what is found and exploring its relevance follows. So altered transcriptomes of different cell-types under different conditions is the readout for what you'll be pursuing. Comparing your findings to other datasets a way of aligning/contrasting your findings with existing literature.*
+
 #### Writing and topics
 
 Biology -\> ideas -\> work -\> biology
@@ -66,13 +74,50 @@ ychromosome_genes$V11 <- sub("^ gene_name", "", ychromosome_genes$V11)
 ychromosome_genes$V9 <- sub("^gene_id ", "", ychromosome_genes$V9)
 
 #Generate TRUE/FLASE boolean vector of the ChrY status, generates list the length of Verity data, if you want list of the genes in verity which are chrY, then swap the two lists in the command to make a short/ subset list
-matching_feats<-Verity.combinedNBHME7[["RNA"]]@data@Dimnames[[1]]%in% ychromosome_genes$V11
+matching_featsnbhme7<-Verity.combinedNBHME7[["RNA"]]@data@Dimnames[[1]]%in% ychromosome_genes$V11
 #convert to more descriptive annotation
-matching_feats <- ifelse(matching_feats, 'ChrY', 'Other')
+matching_featsnbhme7 <- ifelse(matching_featsnbhme7, 'ChrY', 'Other')
 
-Verity.combinedNBHME7[["RNA"]]@meta.features$ChrY_status<-matching_feats
+Verity.combinedNBHME7[["RNA"]]@meta.features$ChrY_status<-matching_featsnbhme7
+
+cluster_chry_genestochecknNBHME7<-subset(Verity.combinedNBHME7[["RNA"]]@meta.features, subset=ChrY_status=='ChrY')
+
+#Plot every gene to see where expression levels are strongest, requires exporting at high resolution
+FeaturePlot(Verity.combinedNBHME7, features = rownames(cluster_chry_genestochecknNBHME7), raster = FALSE)
+
+VlnPlot(Verity.combinedNBHME7, features = rownames(cluster_chry_genestochecknNBHME7), group.by = 'sample', raster=F)
+
+#Checking aged samples 
+matching_featsAGED<-Ver_list$AGEING[["RNA"]]@data@Dimnames[[1]]%in% ychromosome_genes$V11
+#convert to more descriptive annotation
+matching_featsAGED <- ifelse(matching_featsAGED, 'ChrY', 'Other')
+
+Ver_list$AGEING[["RNA"]]@meta.features$ChrY_status<-matching_featsAGED
+
+cluster_chry_genestocheckAGED<-subset(Ver_list$AGEING[["RNA"]]@meta.features, subset=ChrY_status=='ChrY')
+
+#Plot every gene to see where expression levels are strongest, requires exporting at high resolution
+FeaturePlot(Ver_list$AGEING, features = rownames(cluster_chry_genestocheckAGED), raster = FALSE)
+
+VlnPlot(Verity.combinedNBHME7, features = rownames(cluster_chry_genestocheckAGED), group.by = 'sample', raster=F)
 ```
+
+Seeing some expresion of chrY genes in the female only samples I think.
+
+do you have a matrix with all the gene expression levels from all samples in, if so, one could make a heatmap of just the male gene expression values across all the samples, and use the heatmap clustering to group the samples.  That should provide a quick insight!
+
+```{r}
+DoHeatmap(Verity.combinedNBHME7 ,slot = 'counts',features = rownames(cluster_chry_genestocheck), raster=F, draw.lines=T, combine=T,group.by = 'sample' )
+```
+
+[Verity_chry_genes_sample.png](https://uoe-my.sharepoint.com/:i:/r/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Images/Verity_data/Verity_chry_genes_sample.png?csf=1&web=1&e=OckDZW) , [chry_linked_genes.png](https://uoe-my.sharepoint.com/:i:/r/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Images/Verity_data/chry_linked_genes.png?csf=1&web=1&e=MAm94F) <https://uoe-my.sharepoint.com/:i:/r/personal/s2268606_ed_ac_uk/Documents/Working%20folder%20desktop/T2_Research%20Project/Images/Verity_data/Verity_aged_chry_genes_sample.png?csf=1&web=1&e=VWx2q2> also showing in the aged samples that these genes have more counts.
+
+### Astrocyte subsetting
+
+I am currently subsetting astrocytes out based purely on the SingleR annotation of verity and terminal datasets. I should dedicate some time to using more markers to identify the cells.
 
 ------------------------------------------------------------------------
 
 ## SUMMARY
+
+Saw some y chromosome gene counts in the data even in female samples, essentially need to ignore it as it does not come through the analysis. Could the genes be from the PseudoAutosomal Region?
