@@ -1,0 +1,23 @@
+# 16/07/23
+
+## Plan today
+
+------------------------------------------------------------------------
+
+Have generated Redux slota and verity markers, need to adjust Harmony script to make the comparisons by loading the correct astrocytes if going for integration at any point.
+
+Issues with Add annotation from ensembl for gene description, ensembl ID and chromosome location ✅ resolved
+
+Need to refine the DEG list process, make script to load it properly and run in one go, have saving blocka s separate to not overwrite each run!
+
+Do some reading
+
+Make a GEO API query to retrieve GEO accession info? Check Simon lectures
+
+venndiagramGenesRelaxed_Verity_Slota_HP.csv has the corssover with the Verity and Slota HP genes without any filtering and wider parameters
+
+venndiagramGenesRelaxed_Verity_Slota_HP_DOWN.csv and venndiagramGenesRelaxed_Verity_Slota_HP_UP.csv has latest filtered lists of interatctions
+
+------------------------------------------------------------------------
+
+## SUMMARY

@@ -232,6 +232,62 @@ repeat the 'work on NBH vs ME7 only for integration' but with NBH vs. Ageing
 
 Have run up to Find DEGs within the astrocyte subclusters in Verity, need to finish making list then do Slota.
 
--   MAke DEG lists from Verity, then try to identify the astrocytes on Slota.
+-   MAke DEG lists from Verity (saved as Verity_astrocyte_prion.markers_Redux.csv),✅
+
+-   try to identify the astrocytes on Slota, go from singlet id and compare ot Verity script
+
+-   Add annotation from Nick's email
+
+-   See Nick's literature advice
 
 ## Notes from group presentation
+
+Background needs work
+
+In future presetnations, talk about astrocytes + prion +justification (astrocyte scale, high resolution in our dataset is a benefit of our data)
+
+Why this dataset, compare to literature's technology too
+
+Somatic information is lost, cell populations are more appropriate and representative of true biology
+
+what are differences in cortex? How does prion affect brain regions differently?
+
+Ctx is less noisy as terminal specimen because it is affected later
+
+Go over ageing paper first, then discard it after a while, focus on the other two instead and explore QC/clustering/DEGS of each data first before the comparison (that's the narrative).
+
+nGene shows gene count per cell number, explain in plots why we want x standard or expected minimums
+
+Violin plots of QC metrics all at once are good, show for each dataset, use point sizes of 0
+
+Different averages , worried about downstream effects
+
+Remove outliers
+
+For cell membership, show bubbleplots not columns.
+
+In limitations, mention SingleR and SoupX
+
+Different treatments, curate GO terms, Piano for GSEA, see Nick's.
+
+Integraiton didn't work due to probably confounding factors between datasets
+
+Neurotrophic/ neurotoxic genes
+
+check top 20 targets in DEGs, find GO term + pathway assessment
+
+top 20 up or down
+
+data1, data2, data1 vs 2, GSEA
+
+GO terms per gene, put combo into KEGG
+
+ABCAM annotatino, prevalence in clusters, legend by prevalence
+
+Visuall see the following in disease
+
+synaptic loss, dendritic loss, cell body loss
+
+Our data and prions does allow that
+
+cell body loss not in most conditinos, treatment, diseases
