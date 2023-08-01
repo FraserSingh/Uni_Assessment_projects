@@ -1,0 +1,62 @@
+# 27/07/23
+
+# Plan today
+
+Venn diagram refine
+
+Run KEGG options?
+
+GSEA code working
+
+Candidate Id/ background Reading
+
+Check na's and mapping of names to gene list... is this affecting my DEG lists?
+
+------------------------------------------------------------------------
+
+# DEG shortlist
+
+Overlap genes should definitely on list to inspect, make profile for each with up + down regulation effects.
+
+Check the counts for genes in enriched terms, look at which cells might be expressing them? show that activated astrocytes are expressing them?
+
+# Plotting notes
+
+Make heatmap axis foldchange from left to right high to low.
+
+Make heatmap wider
+
+Verity ageing counts seemed off, check input again
+
+GO Ovr vs. GSEA differences
+
+see PMD 9187743 for GSEA output examples Excess ribosomal protein production unbalances translation in a model of Fragile X Syndrome - PMC: <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9187743/>
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+added more plotting for Functional analysis (Change object referencing in each functional annotation step)
+
+Made Venn output better
+
+Reactome GSEa wokrs for Verity Prion Up
+
+added entrez id to verity prion.....checked which are not being mapped.... genes were erroeously added by the bitr assignation of entrez_IDs so they will be dropped (only 2)
+
+## Added to Todo
+
+Figure out fold change param for GO Ovr plots
+
+Make overlap lists to choose genes of interest
+
+make gene profiles from literature.
+
+Reactome vs Go GSEA, get GO GSEA working?
+
+geneList is making duplicates apparently, might affect GSEA, the duplicate gene was removed, but there are NAs which are potentially duplicated. See Verity Prion functional annotation:
+
+```{r}
+#There are non mappings here, shouldn't just be Rik genes as they will be gone by now.....
+table(duplicated(names(geneList)))
+```

@@ -1,0 +1,224 @@
+# 26/07/23
+
+# Plan today
+
+-   Get Verity workflow run for DEGs
+
+    -   Fix Verity from line 718, choose resolution and astrocytes
+
+-   Run VennDiagram comp
+
+    -   Add Verity ageing in
+
+-   Get GSEA going
+
+-   ID DEGs of interest
+
+------------------------------------------------------------------------
+
+# GSEA prep
+
+GO enrichment as scale of colour in GSEA
+
+Osterweil Verity SEO publication for GSEA outputs
+
+## Theory
+
+In GSEA plot, ranked list of genes by log2fc is iteratively checked against search terms to see how often the term is linked to the list as a whole, the running sum of the list is plotted along an x axis, with a peak (or trough) at either end signifying that the most upregulated (or most downregulated) genes in the list by log2fc are related significnacntly to the term being searched.
+
+The K-S calculation assesses significnance of the GSEA plot.
+
+We reduce False Positive enriched GO terms by using the B-H correction (wih estimated FDR manually provided between 5-20%), this cuts off 'enriched' GO terms by having \<0.05 criteria for both the p value and BH correection value.
+
+## Plots to make
+
+Start here: <https://yulab-smu.top/biomedical-knowledge-mining-book/clusterprofiler-go.html> and follow guide through
+
+GO
+
+```{r}
+geneList<-#entire DEG list
+gene<-#list of DEGs above a certain log2fc
+
+  
+#GO classification
+ggo <- groupGO(gene     = gene,
+               OrgDb    = org.Ms.eg.db, #FIXME
+               ont      = "ALL",
+               level    = 3, #specified GO term level
+               readable = TRUE) #return as gene symbols
+
+head(ggo)
+
+
+#GO over-representation
+ego <- enrichGO(gene          = gene,
+                universe      = geneList,
+                keyType       = 'SYMBOL',
+                OrgDb         = org.Ms.eg.db,
+                ont           = "ALL",
+                pAdjustMethod = "BH", #BH correction
+                pvalueCutoff  = 0.01, #FIXME, increase?
+                qvalueCutoff  = 0.05,
+                readable      = TRUE)
+head(ego)
+
+goplot(ego) #acyclic graph
+
+GO_OvR_df<-data.frame(ego)
+write.csv(GO_OvR_df, file = paste0(plotting_path,"datasetGO_OvR.png"))
+
+#GO GSEA
+
+ego3 <- gseGO(geneList     = geneList,
+              OrgDb        = org.Hs.eg.db,
+              ont          = "ALL",
+              minGSSize    = 100,
+              maxGSSize    = 500,
+              pvalueCutoff = 0.05,
+              verbose      = FALSE)
+
+```
+
+Kegg
+
+```{r}
+
+search_kegg_organism('mmu', by='kegg_code')
+
+#choose kegg organime
+
+mouse <- search_kegg_organism('<Escherichia coli>', by='scientific_name')
+head(mouse)
+
+#KEGG pathway over-representation analysis
+kk <- enrichKEGG(gene         = gene,
+                 organism     = 'hsa', #human, change?
+                 pvalueCutoff = 0.05)
+head(kk)
+
+#KEGG pathway GSEA
+kk2 <- gseKEGG(geneList     = geneList,
+               organism     = 'hsa',
+               minGSSize    = 120,
+               pvalueCutoff = 0.05,
+               verbose      = FALSE)
+head(kk2)
+
+#Potentially more straightforward interpretation
+#KEGG module over-representation analysis
+mkk <- enrichMKEGG(gene = gene,
+                   organism = 'hsa',
+                   pvalueCutoff = 1,
+                   qvalueCutoff = 1)
+head(mkk)
+
+#KEGG module GSEA
+mkk2 <- gseMKEGG(geneList = geneList,
+                 organism = 'hsa',
+                 pvalueCutoff = 1)
+head(mkk2)
+
+
+#Visualise enriched KEGG pathways
+#Open web browser and highlight enriched genes
+browseKEGG(kk, <'hsa04110'>) #keggid taken from gsea output 
+
+#visualise pathways in static image with 
+library("pathview")
+hsa04110 <- pathview(gene.data  = geneList,
+                     pathway.id = "hsa04110", #highlight the KEGG pathway with log2fc data in too
+                     species    = "hsa",
+                     limit      = list(gene=max(abs(geneList)), cpd=1))
+```
+
+Reactome
+
+```{r}
+#BiocManager::install("ReactomePA")
+library(ReactomePA)
+
+#Reactome over-representation
+x <- enrichPathway(gene=Verity_DEGs_PrionUp__entrez$ENTREZID, pvalueCutoff = 0.05, readable=TRUE, organism = "mouse")
+head(x)
+
+#Reactome GSEA
+y <- gsePathway(geneList, 
+                pvalueCutoff = 0.2,
+                pAdjustMethod = "BH",
+                organism = "mouse",
+                verbose = FALSE)
+head(y)
+
+ridgeplot(y)
+```
+
+More plotting options
+
+```{r}
+library(enrichplot)
+barplot(edo, showCategory=20) 
+#alter barplot appearance
+mutate(edo, qscore = -log(p.adjust, base=10)) %>% 
+    barplot(x="qscore")
+
+
+#gene concept network
+
+## convert gene ID to Symbol
+edox <- setReadable(edo, 'org.Mm.eg.db', 'ENTREZID')
+p1 <- cnetplot(edox, foldChange=geneList)
+
+## categorySize can be scaled by 'pvalue' or 'geneNum'
+p2 <- cnetplot(edox, categorySize="pvalue", foldChange=geneList)
+p3 <- cnetplot(edox, foldChange=geneList, circular = TRUE, colorEdge = TRUE) 
+cowplot::plot_grid(p1, p2, p3, ncol=3, labels=LETTERS[1:3], rel_widths=c(.8, .8, 1.2))
+
+p4 <- heatplot(edox, foldChange=geneList, showCategory=5)
+
+edox2 <- pairwise_termsim(edox)
+p1 <- treeplot(edox2)
+p2 <- treeplot(edox2, hclust_method = "average")
+aplot::plot_list(p1, p2, tag_levels='A')
+
+edo <- pairwise_termsim(edo)
+p1 <- emapplot(edo)
+p2 <- emapplot(edo, cex_category=1.5)
+p3 <- emapplot(edo, layout="kk")
+p4 <- emapplot(edo, cex_category=1.5,layout="kk") 
+cowplot::plot_grid(p1, p2, p3, p4, ncol=2, labels=LETTERS[1:4])
+
+#upset plot to show overlap between gSE
+upsetplot(edo) #need ggupset
+
+```
+
+<https://youtu.be/B7F7a9NcGS0?t=742> for over representation results
+
+MA plot? <https://youtu.be/RASeeGhIqPc?t=775>
+
+Could use Mouse mine but need ensemble IDs
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Sent Nick list of top DEGs currently candidates.( Justify their decisions with publication links for each. Relate the choice of DEGs to the GSEA outputs, highlight in the longer list so he can suggest others if required.)
+
+-   Got Verity workflow running for DEGs
+
+-   Got GE script working for all, but couldn''t get GSEA results
+
+-   added seed to scripts as script is in final form for data generation for reproducibility
+
+# Todo
+
+Add GO GSEA
+
+Adjust plot sizes, as the text is too small at the moment
+
+Ageing is not giving many genes with logfc2 \> 0.25, so functional annotation not working for upregulated genes. Could do down?
+
+Need to check input for gseGO, as none are working
+
+In the intro, describe some of the classic markers to breeze past them later in the discussion....'...irrespective of disease state...'

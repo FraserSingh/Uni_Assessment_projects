@@ -1,0 +1,35 @@
+# 18/07/2023
+
+## Plan today
+
+Get DGEs for Ageing
+
+Present DGEs
+
+fix GSEA
+
+Read
+
+------------------------------------------------------------------------
+
+create overlap gene lists withdifferente subset
+
+Removing verity ageing and streamline
+
+Argument made for integration [here](https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06_integration.md#:~:text=Oftentimes%2C%20when%20clustering%20cells%20from%20multiple%20conditions%20there%20are%20condition%2Dspecific%20clusters%20and%20integration%20can%20help%20ensure%20the%20same%20cell%20types%20cluster%20together.) : '*Oftentimes, when clustering cells from multiple conditions there are condition-specific clusters and integration can help ensure the same cell types cluster together.*'
+
+FOR PLOTs *Tools \>\> Global Options \>\> R Markdown \>\> Show output inline for all R Markdown documents*] thing as shown in the screenshot.
+
+Doublet rate might need adjusting see [this](https://www.parsebiosciences.com/wp-content/uploads/2022/01/Parse-TechnicalBrochure.pdf) and literature using Parse pipeline
+
+<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7424925/>
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+More literature on doublet rate
+
+Show Nick the overlap of Verity sample with clustering in astrocytes, suggests integration?
+
+Get Slota cleaned up and run venn diagram scripts

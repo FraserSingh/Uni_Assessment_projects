@@ -1,0 +1,142 @@
+# 22/07/23
+
+## Plan today
+
+------------------------------------------------------------------------
+
+# Dealing withe Terminal paper
+
+Email from Jessy Slota:
+
+```{text}
+Hi Fraser,
+
+I think the files you are using are the “raw” RNA counts from the fully integrated dataset. They were generated as follows:
+
+write10xCounts(x = dt.sct@assays$RNA@counts, path = "output/files_upload/raw_matrix/")
+
+This integrated dataset was made after quality control/pre-processing/filtering of individual datasets, and so it is not possible to obtain a singular raw gene expression matrix for the fully integrated dataset. The broad institute’s single-cell portal makes it mandatory to upload a singular .mtx file of “raw” read counts for the entire dataset, and this is why the file is labeled as such. Unfortunately, this label is misleading because there is no file of true raw read counts (from cellranger) for the full dataset. The true raw read counts are separate for each of the 22 libraries that were used to construct the final dataset.
+
+The actual raw .mtx files for each individual library are provided in the “raw_mtxs.zip” directory, which is available to download. These files contain the raw gene counts as integers, although you will need to process each one individually and then perform dataset integration yourself. Raw .fastq files are also provided, in case you would like to run cellranger yourself to obtain the raw gene expression matrices.
+
+I tried uploading the real raw .mtx files separately as the “raw” read count files, but there was an issue with some of the cell barcodes overlapping between different files and I wasn’t able to do this. This is why I uploaded them as a zipped folder.
+
+I am sorry about the confusion. I will see if there is some way I can merge the actual raw .mtx files into a single file and replace the current “raw” expression file so things are less confusing. In the meantime, try using the zipped folder with separate raw .mtx files and let me know if that works for you.
+
+Best,
+Jessy
+
+```
+
+So, unzipping the .gz files from the /home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/ with gunzip \*.gz
+
+Put together a list for Slota samples then use the Ximerakis script to process them! At least the code is nearly there.
+
+-   SoupX code return
+
+    -   loop creation of folders in bash in SCP1962 folder to use code below
+
+-   load souped matrices and check for integers
+
+-   if integers are present, adjust Clean script to use new laoding, include system commands from bash.
+
+    -   Integers were present in manually loaded matrices, and these are pre-filtered, so don't need to make soupx work. simply load them, then combine to continue workflow I hope.
+
+        ```{bash}
+        #first draft
+        for sample in /home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/Slota_samples.txt ;
+        root_dir:=/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other
+          mkdir ${root_dir}/${sample}
+          mv ${root_dir}/${sample}* ${root_dir}/${sample}
+          
+          mv ${root_dir}/${sample}/${sample}_barcodes.tsv ${root_dir}/${sample}/barcodes.tsv
+          mv ${root_dir}/${sample}/${sample}_features.tsv ${root_dir}/${sample}/features.tsv
+          mv ${root_dir}/${sample}/${sample}_matrix.mtx ${root_dir}/${sample}/matrix.mtx
+        ```
+
+        ```{bash}
+        #CHATGPT assisted
+
+        #!/bin/bash
+
+        # Define the root directory
+        root_dir="/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other"
+
+        # Assuming the sample names are in a file called "Slota_samples.txt"
+        sample_names_file="/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/Slota_samples.txt"
+
+        # Loop through each sample name in the file
+        while IFS= read -r sample
+        do
+            # Create a directory for the sample if it doesn't exist
+            mkdir -p "${root_dir}/${sample}"
+
+            # Move the relevant files to the directory
+            mv "${root_dir}/${sample}"* "${root_dir}/${sample}"
+
+            # Rename the files
+            mv "${root_dir}/${sample}/${sample}_barcodes.tsv" "${root_dir}/${sample}/barcodes.tsv"
+            mv "${root_dir}/${sample}/${sample}_features.tsv" "${root_dir}/${sample}/features.tsv"
+            mv "${root_dir}/${sample}/${sample}_matrix.mtx" "${root_dir}/${sample}/matrix.mtx"
+        done < "$sample_names_file"
+
+        cd $root_dir
+        gzip */{barcodes,features,matrix}*
+        ```
+
+```{r}
+# Create list of folder names
+sample_names<- readLines("/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/Slota_samples.txt")
+#rename them for Slota folders
+
+
+# Loop through each folder to process it
+for (folder in sample_names) {
+  folder_path=paste0("/home/s2268606/University_Directories/Project_23/External_datasets/Slota_paper/SCP1962/other/",folder)
+  
+  
+  current_data<-Read10X(data.dir =folder_path)
+  current_obj<-CreateSeuratObject(counts=current_data, project=folder)
+  assign(paste0(folder,"_object"), current_obj)
+  
+}
+
+Slota_raw_obj_clean<-merge(PBS25HP_object, y=c(PBS48CX_object,PBS48HP_object,PBS60CX_object,PBS61CX_object,PBS73CX_object,RML122CX_object,RML122HP_object,RML132CX_object,RML132HP_object,RML133CX_object,RML133HP_object,RML134CX_object,RML134HP_object,RML138CX_object,RML138HP_object,RML140CX_object,RML140HP_object,RML142CX_object,RML142HP_object,RML145CX_object,RML145HP_object), add.cells.ids=c('PBS48CX','PBS48HP','PBS60CX','PBS61CX','PBS73CX','RML122CX','RML122HP','RML132CX','RML132HP','RML133CX','RML133HP','RML134CX','RML134HP','RML138CX','RML138HP','RML140CX','RML140HP','RML142CX','RML142HP','RML145CX','RML145HP'
+),project="Terminal")
+```
+
+```{r}
+#_object should be good for workflow, use Verity to combine them. Check that the _cells objects are integers 
+```
+
+Integers all there, stuck on splitting samples based on metadata for doublet finder. run levels\$sample or \$active.ident? split on active ident? try and load the samples differently?
+
+Active identities were being assigned wrong, sample RML134HP was not being annotated. This sample is very low quality as a whole so i will be discarding it, alongside the other two poor samples.
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+To fix deleted git references, make new repo, clone Scratch space scripts in then move the .git folder to working folder, this will fix references. might need to add back remote details with
+
+```{bash}
+git remote add Scratch_space_scripts https://github.com/FraserSingh/Scratch_space_scripts.git
+```
+
+remove PBS73CX, RML133HP, RML134HP?
+
+![](images/Slota_investigation.png)
+
+# Nick notes
+
+Allen brain atlas (c57, take sections at intervals with staining for lots, ISH info, could show plots and staining for markers by region if required), hippocampome.org (lit review essentially, list entities with differnetial expression, check for markers)
+
+Need to integrate the terminal paper because of the time course issue. Revisit old Verity script for self-integration.
+
+add haemoglobin filters
+
+remove the samples and integrate
+
+"Reagent clogs in the microfluidics of the chromium controller during separation of single cells reduced the usable dataset in the case of the hippocampal samples to 7 RML and 2 mock mice. These two mock mice used were collected at 110 and 147 dpi. Following pre-processing and quality control, the resulting 21 single-cell RNAseq datasets were integrated" -Slota
+
+Show that the data failed the QC anyway so would be removed

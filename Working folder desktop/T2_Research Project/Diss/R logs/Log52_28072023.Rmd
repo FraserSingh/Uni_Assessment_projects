@@ -1,0 +1,136 @@
+# 28/07/23
+
+# Plan today
+
+Send Nick the GSEA outcomes. try and get plotting down (look to published data?)
+
+------------------------------------------------------------------------
+
+# Investigating GSEA problems
+
+find out about NAs for geneList (which I hope are the only duplicates), NAs caused by failure to map, try using biomart to map instead by reusing code from above.
+
+Trying to use bm for names resulted in more NAs ! So currently I need to manually assign the names?? use btr again and try manually append the list of NAs. Trying to use from ALIAS in bitr. Giong to manually assign the IDs.
+
+Could the version of the biomart mouse be the issue?
+
+the Zinc finger Gene IDs are present in NCBI's GRCm39 genome, maynbe use that version to annotate?
+
+```         
+ensembl <- useEnsembl(biomart="genes", dataset="hsapiens_gene_ensembl", version=93)
+```
+
+Using biomartr, I retrieved the possible datasets for mouse and found that the paramter i used is accessing the correct data , indicating that it's the multiple entries per gene that is causing NAs to be assigned instead.
+
++-----------------+-----------------+----------+-------------+-------------+
+| **\             | **description** | **mart** | **dataset** | **version** |
+| organism_name** |                 |          |             |             |
++:================+:================+:=========+:============+:============+
+|                 |                 |          |             |             |
++-----------------+-----------------+----------+-------------+-------------+
+
+|       |           |                                                                            |                       |                                |        |
+|:------|:----------|:---------------------------------------------------------------------------|:----------------------|:-------------------------------|:-------|
+| **1** | mmusculus | Mouse genes (GRCm39)                                                       | ENSEMBL_MART_ENSEMBL  | mmusculus_gene_ensembl         | GRCm39 |
+| **2** | mmusculus | Mouse sequences (GRCm39)                                                   | ENSEMBL_MART_SEQUENCE | mmusculus_genomic_sequence     | GRCm39 |
+| **3** | mmusculus | karyotype_start                                                            | ENSEMBL_MART_GENOMIC  | mmusculus_karyotype_start      | GRCm39 |
+| **4** | mmusculus | karyotype_end                                                              | ENSEMBL_MART_GENOMIC  | mmusculus_karyotype_end        | GRCm39 |
+| **5** | mmusculus | Mouse Structural Variants (GRCm39)                                         | ENSEMBL_MART_SNP      | mmusculus_structvar            | GRCm39 |
+| **6** | mmusculus | Mouse Short Variants (SNPs and indels excluding flagged variants) (GRCm39) | ENSEMBL_MART_SNP      | mmusculus_snp                  | GRCm39 |
+| **7** | mmusculus | Mouse Other Regulatory Regions (GRCm39)                                    | ENSEMBL_MART_FUNCGEN  | mmusculus_external_feature     | GRCm39 |
+| **8** | mmusculus | Mouse miRNA Target Regions (GRCm39)                                        | ENSEMBL_MART_FUNCGEN  | mmusculus_mirna_target_feature | GRCm39 |
+| **9** | mmusculus | Mouse Regulatory Features (GRCm39)                                         | ENSEMBL_MART_FUNCGEN  | mmusculus_regulatory_feature   | GRCm39 |
+
+It appears the NA genes were in the entrez list all along, the real list of genes not mapping to Entrez IDs are:
+
++-----------------------+--------------+----------+
+| **\                   | **entrezid** | **gene** |
+| geneList_entrezname** |              |          |
++:======================+:=============+:=========+
+|                       |              |          |
++-----------------------+--------------+----------+
+
+|          |               |     |                    |                                                  |                                                      |
+|:---------|:--------------|:----|:-------------------|--------------------------------------------------|------------------------------------------------------|
+| **23**   | 0.1087536280  | NA  | 2610507B11Rik      | [72503](https://www.ncbi.nlm.nih.gov/gene/72503) | <https://www.informatics.jax.org/marker/MGI:1919753> |
+| **55**   | 0.2451863746  | NA  | 4932438A13Rik      |                                                  |                                                      |
+| **77**   | 0.1811278983  | NA  | 9330162G02Rik      |                                                  |                                                      |
+| **90**   | 0.1409870443  | NA  | A230103L15Rik      |                                                  |                                                      |
+| **469**  | -0.0007866674 | NA  | Arhgap26.1         |                                                  |                                                      |
+| **598**  | 0.0484149031  | NA  | Atp5o.1            |                                                  |                                                      |
+| **660**  | 0.0938217115  | NA  | B830012L14Rik      |                                                  |                                                      |
+| **1772** | 0.4692076571  | NA  | ENSMUSG00000095041 |                                                  |                                                      |
+| **1773** | 0.0508463511  | NA  | ENSMUSG00000119996 |                                                  |                                                      |
+| **1774** | 0.0578772527  | NA  | ENSMUSG00000120002 |                                                  |                                                      |
+| **1775** | -0.0016463303 | NA  | ENSMUSG00000120081 |                                                  |                                                      |
+| **1776** | 0.0218263099  | NA  | ENSMUSG00000120166 |                                                  |                                                      |
+| **1777** | 0.1255968137  | NA  | ENSMUSG00000120248 |                                                  |                                                      |
+| **1778** | 0.0456359108  | NA  | ENSMUSG00000120285 |                                                  |                                                      |
+| **1779** | 0.0705292432  | NA  | ENSMUSG00000121307 |                                                  |                                                      |
+| **1780** | 0.0468830961  | NA  | ENSMUSG00000121318 |                                                  |                                                      |
+| **1781** | 0.0634832789  | NA  | ENSMUSG00000121395 |                                                  |                                                      |
+| **1901** | 0.1023165624  | NA  | Fam126a            |                                                  |                                                      |
+| **1902** | 0.2770059990  | NA  | Fam126b            |                                                  |                                                      |
+| **1923** | 0.2453125899  | NA  | Fam189a1           |                                                  |                                                      |
+| **1929** | 0.1210840642  | NA  | Fam214a            |                                                  |                                                      |
+| **2233** | 0.0713206173  | NA  | Gm12905            |                                                  |                                                      |
+| **2234** | 0.0626835059  | NA  | Gm12940            |                                                  |                                                      |
+| **2251** | 0.0697464966  | NA  | Gm20431            |                                                  |                                                      |
+| **2257** | 0.1748306599  | NA  | Gm20696            |                                                  |                                                      |
+| **2258** | -0.0409464256 | NA  | Gm20713            |                                                  |                                                      |
+| **2262** | -0.0485036221 | NA  | Gm2115             |                                                  |                                                      |
+| **2264** | 0.1015704039  | NA  | Gm21984            |                                                  |                                                      |
+| **2268** | 0.2091871836  | NA  | Gm26652            |                                                  |                                                      |
+| **2272** | 0.0885119975  | NA  | Gm26992            |                                                  |                                                      |
+| **2276** | 0.0689904095  | NA  | Gm28376            |                                                  |                                                      |
+| **2297** | 0.0889111089  | NA  | Gm36975            |                                                  |                                                      |
+| **2298** | 0.1036987013  | NA  | Gm37240            |                                                  |                                                      |
+| **2299** | 0.1150232944  | NA  | Gm37376            |                                                  |                                                      |
+| **2300** | 0.0096715857  | NA  | Gm37606            |                                                  |                                                      |
+| **2304** | 0.0412953889  | NA  | Gm37899            |                                                  |                                                      |
+| **2305** | 0.0629664751  | NA  | Gm38020            |                                                  |                                                      |
+| **2306** | 0.3404226640  | NA  | Gm38353            |                                                  |                                                      |
+| **2307** | 0.1180736269  | NA  | Gm38393            |                                                  |                                                      |
+| **2322** | 0.0756377099  | NA  | Gm42669            |                                                  |                                                      |
+| **2323** | 0.0541053645  | NA  | Gm42791            |                                                  |                                                      |
+| **2324** | 0.0473830638  | NA  | Gm43517            |                                                  |                                                      |
+| **2325** | 0.0762767455  | NA  | Gm44257            |                                                  |                                                      |
+| **2326** | 0.0357714568  | NA  | Gm44503            |                                                  |                                                      |
+| **2327** | 0.0579918764  | NA  | Gm44559            |                                                  |                                                      |
+| **2328** | 0.0371027668  | NA  | Gm44560            |                                                  |                                                      |
+| **2329** | 0.1571406339  | NA  | Gm44724            |                                                  |                                                      |
+| **2330** | -0.0314197639 | NA  | Gm45455            |                                                  |                                                      |
+| **2331** | 0.2075348249  | NA  | Gm45837            |                                                  |                                                      |
+| **2332** | 0.1071894136  | NA  | Gm45844            |                                                  |                                                      |
+| **2333** | -0.0426702897 | NA  | Gm45846            |                                                  |                                                      |
+| **2334** | 0.0115693887  | NA  | Gm45847            |                                                  |                                                      |
+| **2337** | 0.3664369558  | NA  | Gm47283            |                                                  |                                                      |
+| **2338** | 0.1813955788  | NA  | Gm48678            |                                                  |                                                      |
+| **2339** | 0.0407484285  | NA  | Gm48747            |                                                  |                                                      |
+| **2341** | -0.0154852623 | NA  | Gm49130            |                                                  |                                                      |
+| **2342** | 0.1003350645  | NA  | Gm49164            |                                                  |                                                      |
+| **2344** | 0.1455324596  | NA  | Gm49353            |                                                  |                                                      |
+| **2345** | 0.0727633866  | NA  | Gm49359            |                                                  |                                                      |
+| **2346** | 0.0787320220  | NA  | Gm49539            |                                                  |                                                      |
+| **2347** | -0.0177136677 | NA  | Gm49678            |                                                  |                                                      |
+| **2348** | 0.1880919975  | NA  | Gm49711            |                                                  |                                                      |
+| **2349** | 0.2630781972  | NA  | Gm49797            |                                                  |                                                      |
+| **2351** | -0.0827167713 | NA  | Gm5089.1           |                                                  |                                                      |
+| **2352** | -0.0853238529 | NA  | Gm55122            |                                                  | <https://www.informatics.jax.org/marker/MGI:6846717> |
+| **3905** | 0.4286716441  | NA  | Pakap.1            |                                                  |                                                      |
+| **3906** | 0.5497274586  | NA  | Pakap.2            |                                                  |                                                      |
+| **4327** | 0.0683350381  | NA  | Ppp4r1l-ps.1       | 100043911                                        | <https://www.ncbi.nlm.nih.gov/gene/?term=Ppp4r1l-ps> |
+| **4482** | 0.3239585562  | NA  | PTPRG              | 19270                                            | <https://www.ncbi.nlm.nih.gov/gene/19270>            |
+| **6221** | 0.0406843444  | NA  | Wars               | 22375                                            | <https://www.ncbi.nlm.nih.gov/gene/22375>            |
+
+doesn't matter that some of these are p value \> , they are background list of genes so need to all be present.
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+## Added to Todo
+
+Tidy up the geneList manual generation in Verity
+
+Aliases are retrieving some results

@@ -1,0 +1,220 @@
+# 25/07/23
+
+## Plan today
+
+Meeting
+
+Fix Slota and Get DEGs:
+
+-   renewed with DESeq2 for all
+
+-   Using ageing from Verity
+
+------------------------------------------------------------------------
+
+# Meeting notes
+
+Diss length is on learn, 10k words
+
+ID terminal data's lower right peak
+
+GSEA can guide DEG sublisting
+
+Gpam is not just mitochondrial gene, look at Endoplasmic reticulum, involved in UPR
+
+BBB genes might be of interest
+
+Write with story, use subsections to guide the writing
+
+# Terminal re-jig
+
+tissue_group cell ids not prepending, but does not seem to affect downstream
+
+Separate out HP and CX from Terminal data
+
+```{r}
+
+Slota_HP<-subset(Slota_filtered_clean, subset=tissue_group=='PBS_HP' | treatment=='RML_HP')
+Slota_CX<-subset(Slota_filtered_clean, subset=tissue_group=='PBS_CX' | treatment=='RML_CX')
+
+Slota_tissues<-list(Slota_HP,Slota_CX)
+#make into list of two
+
+#do loops for plotting and automation
+
+#For every object in list of two tissue groups
+#DoubletFinder, keep singlets
+Slota_tissues <- lapply(Slota_tissues, function(tissue_group) {
+  #Normalise+Scale with SCTransform?
+  tissue_group <- SCTransform(tissue_group)
+  tissue_group <- RunPCA(tissue_group)
+  tissue_group <- RunUMAP(tissue_group, dims = 1:10)
+  
+  # Find significant PCs
+  stdv <- tissue_group[["pca"]]@stdev
+  sum.stdv <- sum(tissue_group[["pca"]]@stdev)
+  percent.stdv <- (stdv / sum.stdv) * 100
+  cumulative <- cumsum(percent.stdv)
+  co1 <- which(cumulative > 90 & percent.stdv < 5)[1]
+  co2 <- sort(which((percent.stdv[1:length(percent.stdv) - 1] -
+                       percent.stdv[2:length(percent.stdv)]) > 0.1),
+              decreasing = TRUE)[1] + 1
+  min.pc <- min(co1, co2)
+  
+  # Finish pre-processing
+  tissue_group <- RunUMAP(tissue_group, dims = 1:min.pc)
+  tissue_group <- FindNeighbors(object = tissue_group, dims = 1:min.pc)              
+  tissue_group <- FindClusters(object = tissue_group, resolution = 0.1)
+  
+  # pK identification (no ground-truth)
+  sweep.list <- paramSweep_v3(tissue_group, PCs = 1:min.pc, sct = TRUE)
+  sweep.stats <- summarizeSweep(sweep.list)
+  bcmvn <- find.pK(sweep.stats)
+  
+  # Optimal pK is the max of the bomodality coefficient (BCmvn) distribution
+  bcmvn.max <- bcmvn[which.max(bcmvn$BCmetric),]
+  optimal.pk <- as.numeric(bcmvn.max$pK)
+
+  # Homotypic doublet proportion estimate
+  annotations <- tissue_group@meta.data$seurat_clusters
+  homotypic.prop <- modelHomotypic(annotations) 
+  nExp.poi <- round(0.087 * nrow(tissue_group@meta.data)) #expected doublets based on values from 10X resources
+  nExp.poi.adj <- round(nExp.poi * (1 - homotypic.prop))
+  
+  # Run DoubletFinder
+  tissue_group <- doubletFinder_v3(seu = tissue_group, 
+                             PCs = 1:min.pc, 
+                             pK = optimal.pk,
+                             nExp = nExp.poi.adj, 
+                             sct = TRUE, 
+                             pN=0.25)
+  return(tissue_group)
+  })
+
+  #DimReduc (is done in DF?)
+    #DimReduc highlights
+      #Id astrocytes, subset them out
+  #annotate astrocytes with gene descriptions
+  #DimReduc astrocytes
+  #get DEGs between prion condition and control, write to CSV
+
+
+#Running this on both tissue groups should give two lists of DEGs for Terminal paper 
+
+
+#Show venndiagram overlap with Verity paper
+#Run GSEA on each of the three lists (T_Cx,T_Hp, V_Pr) and compare
+#Look at overlap between three lists on gene level, topfilter to top 20 and do shortlisting too.
+
+
+```
+
+If i wanted to run doubletfinder on each oft he samples separately but still have them normalised to the same values: split by tissue, normalise, split by sample again, run doubletfinder on a sample by sample basis.
+
+# Writing plan
+
+Intro
+
+-   Question is: "What are transcriptional states of the astrocytes which we know are proliferating under disease condition in prions? Is there regional difference? How does it differ to the transcriptomic profile of astrocytes in aged tissue_groups and does this suggest accelerated progression to the dysfunction seen in ageing?"
+
+Background
+
+-   Astrocytes
+
+    -   Role in normal brain function
+
+    -   summary of the known behavioural differences in prions
+
+    -   Mention key classical markers to avoid too much detail in discussion
+
+-   Model
+
+    -   Prion
+
+    -   ...
+
+Materials and methods
+
+-   Datasets
+
+    -   ID appropriate data
+
+    -   Experimental generation of data
+
+-   seq platforms for each dataset
+
+    -   Parse
+
+    -   10X chromium
+
+-   Tools used to process data in workflow
+
+    -   SCTransform?
+
+    -   Doubletfinder
+
+        -   doublet rate
+
+    -   
+
+Results
+
+-   QC (show violins for all three, stacked.
+
+    -   Ours
+
+        -   Some batch effect
+
+    -   Terminal
+
+        -   
+
+    -   Ageing
+
+        -   Show with and without SoupX
+
+-   Which comparisons were made
+
+    -   attempts at integration
+
+-   DGEs and GSEA
+
+    -   Top 5 of interest, informed by GSEA?
+
+-   
+
+Discussion
+
+-   Limitations
+
+    -   SoupX
+
+    -   SCTransform
+
+    -   Clustering
+
+    -   External data
+
+Future directions
+
+-   Wet lab ISH and IHC on targets, knockout?
+
+------------------------------------------------------------------------
+
+## SUMMARY
+
+Verity has up to date components. In Slota, the pipeline is split after QC to work on the tissue groups separately. Doublet finder now runs SCTransform and the rest of the pipeline should reflect this. DF is run by tissue group, not sample level.
+
+## Add to Todo list
+
+Add download code into scripts
+
+Add png plotting for each script as in Terminal paper
+
+Reflect Terminal paper steps in Verity, ensure it is mirrored
+
+Add DESeq2 for all datasets
+
+Get ageing information from Verity
+
+Fix Verity from line 718, choose resolution and astrocytes

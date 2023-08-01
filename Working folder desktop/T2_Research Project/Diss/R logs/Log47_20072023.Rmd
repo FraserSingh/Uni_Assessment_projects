@@ -1,0 +1,59 @@
+# 19/07/23
+
+## Plan today
+
+Present to class
+
+Look into GSEA
+
+change DEG processing for Verity to MAST
+
+remove ensembl terms from DEG production, as it's making duplicate rows when adding shared gene symbols with ensembl IDs
+
+redownload the DEG lists after changes are made
+
+turn functional analysis into a loop to generate for Slota Hp and separately for CX?
+
+------------------------------------------------------------------------
+
+# Presentation notes
+
+Clustering could be listed as an improvement, related to the sheer volume of Parse data
+
+# Next steps meeting with Nick
+
+combine sams package with DAVID info single aspect to backup results
+
+say in writing that packages suggested within group, caveats are xyz etc. discuss
+
+venn diagram suggest not much cell autonomous cell reposne, astrocytic behviour might not be specific to brain region. link to preprint cross section paper which says there are few astrocytes across brain, function is the same across?
+
+Lit searches are long winded
+
+take top 20 search gene name and prion neurodegeneration
+
+Find disease condition link and previous study on them.
+
+Get 5 through that
+
+limit how deep you go on Gfap, say it's well characerised in reactive astrocytes in prions, so don't say much. Structural entity and mrophology changes
+
+Be reaslistic about how much can be fit in the diss. Link to reviews if possible.
+
+Mention Cd44
+
+background seq technique could get its own section, write subtitles before writing to guide it
+
+Deadline of 11th for draft to Nick.
+
+Wednesday meetings with Nick whilst he's away
+
+When reading reviews, try to stay 2 links close to the review
+
+Terminal paper rawtable counts at the start of the paper are already not integers, need to compare to Ximerakis output which I made. Ximerakis input is integers... what's going on here!!!!!
+
+Making sure I have the correct counts saved in the raw filtered data folder... the table downloaded was not integer counts.
+
+## SUMMARY
+
+Removed ensembl ID, changed verity to MAST
